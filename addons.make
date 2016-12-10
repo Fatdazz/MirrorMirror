@@ -1,0 +1,9 @@
+ofxColorMap
+ofxCv
+ofxFaceTracker
+ofxFboBlur
+ofxKinect
+ofxMask
+ofxMultiFboBlur
+ofxOpenCv
+ofxTiming
