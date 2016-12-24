@@ -6,6 +6,7 @@
 #include "ofxColorMap.h"
 #include "ofxMultiFboBlur.h"
 #include "ofxFaceTrackerThreaded.h"
+#include "ofxFaceTracker2.h"
 #include "ofxCv.h"
 
 class ofApp : public ofBaseApp{
@@ -42,7 +43,8 @@ class ofApp : public ofBaseApp{
         ofFbo               imageFbo;
         ofxMultiFboBlur     imageBlur;
     
-        ofxFaceTrackerThreaded trackerFace;
+        //ofxFaceTrackerThreaded trackerFace;
+        ofxFaceTracker2 trackerFace;
     
     
 		

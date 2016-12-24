@@ -3,13 +3,13 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
     
-
     debug=true;
     
     kinect.init();
     kinect.setRegistration(true);
     kinect.open();
     kinect.setDepthClipping(500,2000);
+    cout << kinect.getWidth() << "  " << kinect.getHeight() << "\n";
     trackerFace.setup();
     
     grayImage.allocate(kinect.width, kinect.height);
@@ -28,10 +28,10 @@ void ofApp::setup(){
 
     imageBlur.setup(fboS , 3 , 50.0f);
     imageBlur.setNumBlurOverlays(1);
-    imageBlur.setBlurOffset(0.5);
+    imageBlur.setBlurOffset(0.2);
     imageBlur.setBlurPasses(2);
     
-    imageBlur.setBlurOffset(7.0f);
+    imageBlur.setBlurOffset(2.0f);
     imageBlur.setBlurPasses(2);
     
     nearThreshold = 255;
@@ -48,7 +48,7 @@ void ofApp::update(){
     kinect.update();
     if (kinect.isFrameNew()) {
         
-        trackerFace.update(ofxCv::toCv(kinect.getPixels()));
+        trackerFace.update(kinect.getPixels());
         
         grayImage.setFromPixels(kinect.getDepthPixels());
         //kinect.getDepthPixels()
@@ -79,52 +79,33 @@ void ofApp::draw(){
     
     if (!debug) {
         imageBlur.drawBlurFbo();
-        
-        ofPushMatrix();
-        ofSetLineWidth(1);
-        //ofScale(1, 1);
-        ofTranslate(ofGetWidth() / 2, ofGetHeight() / 2);
-        ofScale(5,5,5);
-        ofDrawAxis(trackerFace.getScale());
-        trackerFace.getObjectMesh().drawWireframe();
-        ofPopMatrix();
     }
     else{
         //imageFbo.draw(0, ofGetHeight()/2, ofGetWidth()/2, ofGetHeight()/2);
+        
+                                        // image 1
         ofPushMatrix();
-        //ofScale(0.5, 0.5);
         ofTranslate(0, 0);
-        //kinect.draw(0, 0, ofGetWidth(), ofGetHeight());
-        kinect.draw(0, 0);
-        ofPopMatrix();
-        
-        ofPushMatrix();
-        //ofTranslate(ofGetWidth()/kinect.width, ofGetHeight()/kinect.height);
-        ofSetLineWidth(1);
-        
-        trackerFace.getImageFeature(ofxFaceTrackerThreaded::LEFT_EYE).draw();
-        trackerFace.getImageFeature(ofxFaceTrackerThreaded::RIGHT_EYE).draw();
-        trackerFace.getImageFeature(ofxFaceTrackerThreaded::LEFT_EYEBROW).draw();
-        trackerFace.getImageFeature(ofxFaceTrackerThreaded::RIGHT_EYEBROW).draw();
-        trackerFace.getImageFeature(ofxFaceTrackerThreaded::NOSE_BRIDGE).draw();
-        trackerFace.getImageFeature(ofxFaceTrackerThreaded::NOSE_BASE).draw();
-        trackerFace.getImageFeature(ofxFaceTrackerThreaded::INNER_MOUTH).draw();
-        trackerFace.getImageFeature(ofxFaceTrackerThreaded::OUTER_MOUTH).draw();
-        trackerFace.getImageFeature(ofxFaceTrackerThreaded::JAW).draw();
-        
-        ofTranslate(trackerFace.getPosition());
-        //ofxCv::applyMatrix(trackerFace.getRotationMatrix());
-        
-        trackerFace.getObjectMesh().drawWireframe();
-        ofPopMatrix();
-        
-        grayImage.draw(ofGetWidth()/2, 0, ofGetWidth()/2, ofGetHeight()/2);
-        
-        ofPushMatrix();
         ofScale(0.5, 0.5);
-        ofTranslate(0, ofGetHeight());
+        kinect.draw(0, 0);
+        for (auto instance : trackerFace.getInstances()) {
+            instance.getLandmarks().getImageMesh().drawWireframe();
+        }
+        ofPopMatrix();
+                                        // image 2
+        ofPushMatrix();
+        ofTranslate(ofGetWidth()/2, 0);
+        ofScale(0.5, 0.5);
+        grayImage.draw(0, 0);
+        ofPopMatrix();
+        
+                                        // image 3
+        ofPushMatrix();
+        ofTranslate(0, ofGetHeight()/2);
+        ofScale(0.5, 0.5);
         imageBlur.drawBlurFbo();
         ofPopMatrix();
+        
     }
 
 }

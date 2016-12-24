@@ -4156,6 +4156,164 @@
 				<key>sourceTree</key>
 				<string>SOURCE_ROOT</string>
 			</dict>
+			<key>98F366E8AEAC2511750192E4</key>
+			<dict>
+				<key>explicitFileType</key>
+				<string>sourcecode.c.h</string>
+				<key>fileEncoding</key>
+				<string>30</string>
+				<key>isa</key>
+				<string>PBXFileReference</string>
+				<key>name</key>
+				<string>ofxFaceTracker2Landmarks.h</string>
+				<key>path</key>
+				<string>../../../addons/ofxFaceTracker2/src/ofxFaceTracker2Landmarks.h</string>
+				<key>sourceTree</key>
+				<string>SOURCE_ROOT</string>
+			</dict>
+			<key>0B1AB0BB6132B85346C794B9</key>
+			<dict>
+				<key>fileRef</key>
+				<string>B5DA608E0F9EDDC983B4B8AA</string>
+				<key>isa</key>
+				<string>PBXBuildFile</string>
+			</dict>
+			<key>B5DA608E0F9EDDC983B4B8AA</key>
+			<dict>
+				<key>explicitFileType</key>
+				<string>sourcecode.cpp.cpp</string>
+				<key>fileEncoding</key>
+				<string>30</string>
+				<key>isa</key>
+				<string>PBXFileReference</string>
+				<key>name</key>
+				<string>ofxFaceTracker2Landmarks.cpp</string>
+				<key>path</key>
+				<string>../../../addons/ofxFaceTracker2/src/ofxFaceTracker2Landmarks.cpp</string>
+				<key>sourceTree</key>
+				<string>SOURCE_ROOT</string>
+			</dict>
+			<key>45F621B55AA859EC8194382F</key>
+			<dict>
+				<key>explicitFileType</key>
+				<string>sourcecode.c.h</string>
+				<key>fileEncoding</key>
+				<string>30</string>
+				<key>isa</key>
+				<string>PBXFileReference</string>
+				<key>name</key>
+				<string>ofxFaceTracker2Instance.h</string>
+				<key>path</key>
+				<string>../../../addons/ofxFaceTracker2/src/ofxFaceTracker2Instance.h</string>
+				<key>sourceTree</key>
+				<string>SOURCE_ROOT</string>
+			</dict>
+			<key>4DD96C70A1D94528E8366CBE</key>
+			<dict>
+				<key>fileRef</key>
+				<string>3088A3ABADD817D93580728C</string>
+				<key>isa</key>
+				<string>PBXBuildFile</string>
+			</dict>
+			<key>3088A3ABADD817D93580728C</key>
+			<dict>
+				<key>explicitFileType</key>
+				<string>sourcecode.cpp.cpp</string>
+				<key>fileEncoding</key>
+				<string>30</string>
+				<key>isa</key>
+				<string>PBXFileReference</string>
+				<key>name</key>
+				<string>ofxFaceTracker2Instance.cpp</string>
+				<key>path</key>
+				<string>../../../addons/ofxFaceTracker2/src/ofxFaceTracker2Instance.cpp</string>
+				<key>sourceTree</key>
+				<string>SOURCE_ROOT</string>
+			</dict>
+			<key>CFAFB4D5CD5F5AABC4CBC9E2</key>
+			<dict>
+				<key>explicitFileType</key>
+				<string>sourcecode.c.h</string>
+				<key>fileEncoding</key>
+				<string>30</string>
+				<key>isa</key>
+				<string>PBXFileReference</string>
+				<key>name</key>
+				<string>ofxFaceTracker2InputInfo.h</string>
+				<key>path</key>
+				<string>../../../addons/ofxFaceTracker2/src/ofxFaceTracker2InputInfo.h</string>
+				<key>sourceTree</key>
+				<string>SOURCE_ROOT</string>
+			</dict>
+			<key>60D140975F4EEE2F4B2B1E39</key>
+			<dict>
+				<key>explicitFileType</key>
+				<string>sourcecode.c.h</string>
+				<key>fileEncoding</key>
+				<string>30</string>
+				<key>isa</key>
+				<string>PBXFileReference</string>
+				<key>name</key>
+				<string>ofxFaceTracker2.h</string>
+				<key>path</key>
+				<string>../../../addons/ofxFaceTracker2/src/ofxFaceTracker2.h</string>
+				<key>sourceTree</key>
+				<string>SOURCE_ROOT</string>
+			</dict>
+			<key>2C430677B0E722B5EB0C1FC1</key>
+			<dict>
+				<key>children</key>
+				<array>
+					<string>1A785D79278B77F67FBCC4EA</string>
+					<string>60D140975F4EEE2F4B2B1E39</string>
+					<string>CFAFB4D5CD5F5AABC4CBC9E2</string>
+					<string>3088A3ABADD817D93580728C</string>
+					<string>45F621B55AA859EC8194382F</string>
+					<string>B5DA608E0F9EDDC983B4B8AA</string>
+					<string>98F366E8AEAC2511750192E4</string>
+				</array>
+				<key>isa</key>
+				<string>PBXGroup</string>
+				<key>name</key>
+				<string>src</string>
+				<key>sourceTree</key>
+				<string>&lt;group&gt;</string>
+			</dict>
+			<key>F5097071A8A63295555F2601</key>
+			<dict>
+				<key>children</key>
+				<array>
+					<string>2C430677B0E722B5EB0C1FC1</string>
+				</array>
+				<key>isa</key>
+				<string>PBXGroup</string>
+				<key>name</key>
+				<string>ofxFaceTracker2</string>
+				<key>sourceTree</key>
+				<string>&lt;group&gt;</string>
+			</dict>
+			<key>24B7468AD9B2F6878497D33D</key>
+			<dict>
+				<key>fileRef</key>
+				<string>1A785D79278B77F67FBCC4EA</string>
+				<key>isa</key>
+				<string>PBXBuildFile</string>
+			</dict>
+			<key>1A785D79278B77F67FBCC4EA</key>
+			<dict>
+				<key>explicitFileType</key>
+				<string>sourcecode.cpp.cpp</string>
+				<key>fileEncoding</key>
+				<string>30</string>
+				<key>isa</key>
+				<string>PBXFileReference</string>
+				<key>name</key>
+				<string>ofxFaceTracker2.cpp</string>
+				<key>path</key>
+				<string>../../../addons/ofxFaceTracker2/src/ofxFaceTracker2.cpp</string>
+				<key>sourceTree</key>
+				<string>SOURCE_ROOT</string>
+			</dict>
 			<key>E43C5A4AB73C09290F70362D</key>
 			<dict>
 				<key>fileRef</key>
@@ -5606,6 +5764,7 @@ IFS=$SAVED_IFS
 					<string>64CBB925545F4B82C101EF43</string>
 					<string>6025FAF6414C2CA589764D26</string>
 					<string>2B86176FA97BFB2BEE1F2F83</string>
+					<string>F5097071A8A63295555F2601</string>
 					<string>7CB5F0197C6C987F1A872F06</string>
 					<string>9683228C705CA3FF4F2EA945</string>
 					<string>BB4C8D2FA397096D87B287DF</string>
@@ -5762,9 +5921,14 @@ IFS=$SAVED_IFS
 				<string>E4EB6923138AFD0F00A09F29</string>
 				<key>buildSettings</key>
 				<dict>
+					<key>OTHER_CFLAGS</key>
+					<array>
+						<string>-O2</string>
+					</array>
 					<key>OTHER_LDFLAGS</key>
 					<array>
 						<string>$(OF_CORE_FRAMEWORKS) $(OF_CORE_LIBS)</string>
+						<string>../../../addons/ofxFaceTracker2/libs/dlib/lib/osx/libdlib.a</string>
 						<string>../../../addons/ofxKinect/libs/libusb-1.0/lib/osx/usb-1.0.a</string>
 						<string>../../../addons/ofxOpenCv/libs/opencv/lib/osx/opencv.a</string>
 					</array>
@@ -5784,6 +5948,8 @@ IFS=$SAVED_IFS
 						<string>../../../addons/ofxFaceTracker/libs/FaceTracker/src</string>
 						<string>../../../addons/ofxFaceTracker/libs/FaceTracker/src/lib</string>
 						<string>../../../addons/ofxFaceTracker/src</string>
+						<string>../../../addons/ofxFaceTracker2/libs/dlib/include</string>
+						<string>../../../addons/ofxFaceTracker2/src</string>
 						<string>../../../addons/ofxFboBlur/src</string>
 						<string>../../../addons/ofxKinect/libs</string>
 						<string>../../../addons/ofxKinect/libs/libfreenect</string>
@@ -5886,9 +6052,14 @@ IFS=$SAVED_IFS
 				<string>E4EB6923138AFD0F00A09F29</string>
 				<key>buildSettings</key>
 				<dict>
+					<key>OTHER_CFLAGS</key>
+					<array>
+						<string>-O2</string>
+					</array>
 					<key>OTHER_LDFLAGS</key>
 					<array>
 						<string>$(OF_CORE_FRAMEWORKS) $(OF_CORE_LIBS)</string>
+						<string>../../../addons/ofxFaceTracker2/libs/dlib/lib/osx/libdlib.a</string>
 						<string>../../../addons/ofxKinect/libs/libusb-1.0/lib/osx/usb-1.0.a</string>
 						<string>../../../addons/ofxOpenCv/libs/opencv/lib/osx/opencv.a</string>
 					</array>
@@ -5908,6 +6079,8 @@ IFS=$SAVED_IFS
 						<string>../../../addons/ofxFaceTracker/libs/FaceTracker/src</string>
 						<string>../../../addons/ofxFaceTracker/libs/FaceTracker/src/lib</string>
 						<string>../../../addons/ofxFaceTracker/src</string>
+						<string>../../../addons/ofxFaceTracker2/libs/dlib/include</string>
+						<string>../../../addons/ofxFaceTracker2/src</string>
 						<string>../../../addons/ofxFboBlur/src</string>
 						<string>../../../addons/ofxKinect/libs</string>
 						<string>../../../addons/ofxKinect/libs/libfreenect</string>
@@ -6038,6 +6211,9 @@ IFS=$SAVED_IFS
 					<string>091CD626FECB03B3A6B3A1B2</string>
 					<string>E6E21460246219EE9394310F</string>
 					<string>E43C5A4AB73C09290F70362D</string>
+					<string>24B7468AD9B2F6878497D33D</string>
+					<string>4DD96C70A1D94528E8366CBE</string>
+					<string>0B1AB0BB6132B85346C794B9</string>
 					<string>3800542E2A9FC9F9F4D07001</string>
 					<string>7ADB04AF67C568EAFAEBA546</string>
 					<string>686B0DF6249B52E1A85B39EC</string>
@@ -6140,9 +6316,14 @@ IFS=$SAVED_IFS
 				<string>E4EB6923138AFD0F00A09F29</string>
 				<key>buildSettings</key>
 				<dict>
+					<key>OTHER_CFLAGS</key>
+					<array>
+						<string>-O2</string>
+					</array>
 					<key>OTHER_LDFLAGS</key>
 					<array>
 						<string>$(OF_CORE_FRAMEWORKS) $(OF_CORE_LIBS)</string>
+						<string>../../../addons/ofxFaceTracker2/libs/dlib/lib/osx/libdlib.a</string>
 						<string>../../../addons/ofxKinect/libs/libusb-1.0/lib/osx/usb-1.0.a</string>
 						<string>../../../addons/ofxOpenCv/libs/opencv/lib/osx/opencv.a</string>
 					</array>
@@ -6162,6 +6343,8 @@ IFS=$SAVED_IFS
 						<string>../../../addons/ofxFaceTracker/libs/FaceTracker/src</string>
 						<string>../../../addons/ofxFaceTracker/libs/FaceTracker/src/lib</string>
 						<string>../../../addons/ofxFaceTracker/src</string>
+						<string>../../../addons/ofxFaceTracker2/libs/dlib/include</string>
+						<string>../../../addons/ofxFaceTracker2/src</string>
 						<string>../../../addons/ofxFboBlur/src</string>
 						<string>../../../addons/ofxKinect/libs</string>
 						<string>../../../addons/ofxKinect/libs/libfreenect</string>
@@ -6254,9 +6437,14 @@ IFS=$SAVED_IFS
 				<string>E4EB6923138AFD0F00A09F29</string>
 				<key>buildSettings</key>
 				<dict>
+					<key>OTHER_CFLAGS</key>
+					<array>
+						<string>-O2</string>
+					</array>
 					<key>OTHER_LDFLAGS</key>
 					<array>
 						<string>$(OF_CORE_FRAMEWORKS) $(OF_CORE_LIBS)</string>
+						<string>../../../addons/ofxFaceTracker2/libs/dlib/lib/osx/libdlib.a</string>
 						<string>../../../addons/ofxKinect/libs/libusb-1.0/lib/osx/usb-1.0.a</string>
 						<string>../../../addons/ofxOpenCv/libs/opencv/lib/osx/opencv.a</string>
 					</array>
@@ -6276,6 +6464,8 @@ IFS=$SAVED_IFS
 						<string>../../../addons/ofxFaceTracker/libs/FaceTracker/src</string>
 						<string>../../../addons/ofxFaceTracker/libs/FaceTracker/src/lib</string>
 						<string>../../../addons/ofxFaceTracker/src</string>
+						<string>../../../addons/ofxFaceTracker2/libs/dlib/include</string>
+						<string>../../../addons/ofxFaceTracker2/src</string>
 						<string>../../../addons/ofxFboBlur/src</string>
 						<string>../../../addons/ofxKinect/libs</string>
 						<string>../../../addons/ofxKinect/libs/libfreenect</string>

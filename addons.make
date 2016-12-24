@@ -1,6 +1,7 @@
 ofxColorMap
 ofxCv
 ofxFaceTracker
+ofxFaceTracker2
 ofxFboBlur
 ofxKinect
 ofxMask
