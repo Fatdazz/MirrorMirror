@@ -12,8 +12,7 @@
 class faceAnimation {
     public:
     ofSoundBuffer soundBuffer;
-    vector<ofVec3f>  face;
-    
+    vector<ofPolyline>  face;
     
 };
 
@@ -56,7 +55,7 @@ class ofApp : public ofBaseApp{
     ofFbo               imageFbo;
     ofxMultiFboBlur     imageBlur;
     
-        //ofxFaceTrackerThreaded trackerFace;
+    //ofxFaceTrackerThreaded trackerFace;
     ofxFaceTracker2 trackerFace;
     
     vector<faceAnimation>  faceAnimationVect;
@@ -65,7 +64,5 @@ class ofApp : public ofBaseApp{
     ofSoundStream          soundStream;
     int                    bufferCounter;
 
-    
-    
 		
 };

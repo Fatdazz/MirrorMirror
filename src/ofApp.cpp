@@ -4,13 +4,16 @@
 void ofApp::setup(){
     
     debug=true;
-    
+    // init kinect
     kinect.init();
     kinect.setRegistration(true);
     kinect.open();
     kinect.setDepthClipping(500,2000);
     cout << kinect.getWidth() << "  " << kinect.getHeight() << "\n";
+    
+    // init Face traker
     trackerFace.setup();
+    
     
     grayImage.allocate(kinect.width, kinect.height);
     grayThreshFar.allocate(kinect.width, kinect.height);
@@ -19,9 +22,7 @@ void ofApp::setup(){
     imageGray.allocate(kinect.width, kinect.height, ofImageType::OF_IMAGE_GRAYSCALE);
     imageColor.allocate(kinect.width, kinect.height, ofImageType::OF_IMAGE_COLOR);
     imageFbo.allocate(kinect.width, kinect.height);
-    
-    ofLoadMatrix(const ofMatrix4x4 &m);
-    
+        
     ofFbo::Settings fboS;
     fboS.width = ofGetWidth();
     fboS.height = ofGetHeight();
@@ -148,7 +149,7 @@ void ofApp::keyPressed(int key){
                 farThreshold++;
                 cout << "far: " << farThreshold <<" near: "<<nearThreshold << endl;
                 break;
-            case 'p':
+            case 'i':
                 farThreshold--;
                 cout << "far: " << farThreshold <<" near: "<<nearThreshold << endl;
                 break;
@@ -161,7 +162,11 @@ void ofApp::keyPressed(int key){
                 rec = !rec;
                 cout << faceAnimationVect.size() << endl;
                 break;
+            case 'p':
+                bufferCounter=0;
+                play=!play;
         }
+        
 
     }
 }
@@ -183,7 +188,6 @@ void ofApp::audioOut(ofSoundBuffer &outBuffer){
         }
         bufferCounter++;
     }
-    
 }
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key){
