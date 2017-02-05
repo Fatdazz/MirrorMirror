@@ -20,6 +20,7 @@ void ofApp::setup(){
     imageColor.allocate(kinect.width, kinect.height, ofImageType::OF_IMAGE_COLOR);
     imageFbo.allocate(kinect.width, kinect.height);
     
+    ofLoadMatrix(const ofMatrix4x4 &m);
     
     ofFbo::Settings fboS;
     fboS.width = ofGetWidth();
@@ -38,6 +39,12 @@ void ofApp::setup(){
     farThreshold = 236;
     //farThreshold =0;
     colormap.setMapFromName("pink");
+    
+    int bufferSize = 256;
+    soundStream.setup(this, 2, 1, 44100, bufferSize, 4);
+    rec = play = false;
+    bufferCounter = 0;
+    faceAnimationPtr = NULL;
 }
 
 //--------------------------------------------------------------
@@ -79,6 +86,10 @@ void ofApp::draw(){
     
     if (!debug) {
         imageBlur.drawBlurFbo();
+        for (auto instance : trackerFace.getInstances()) {
+            //instance.getLandmarks().getImageMesh().drawWireframe();
+            trackerFace.drawDebugPose();
+        }
     }
     else{
         //imageFbo.draw(0, ofGetHeight()/2, ofGetWidth()/2, ofGetHeight()/2);
@@ -90,7 +101,20 @@ void ofApp::draw(){
         kinect.draw(0, 0);
         for (auto instance : trackerFace.getInstances()) {
             instance.getLandmarks().getImageMesh().drawWireframe();
+            ofPushView();
+            ofPushStyle();
+            instance.loadPoseMatrix();
+            ofSetColor(255,0,0);
+            ofDrawLine(0,0,0, 100,0,0);
+            ofSetColor(0,255,0);
+            ofDrawLine(0,0,0, 0,100,0);
+            ofSetColor(0,0,255);
+            ofDrawLine(0,0,0, 0,0,-100);
+            ofPopStyle();
+            ofPopView();
+            
         }
+        
         ofPopMatrix();
                                         // image 2
         ofPushMatrix();
@@ -117,7 +141,7 @@ void ofApp::keyPressed(int key){
     
     if (debug) {
         switch (key) {
-            case 'r':
+            case 'e':
                 cout << "BlurOffse: " << imageBlur.getBlurOffset() << " BlurPasses: " <<imageBlur.getBlurPasses() << endl;
                 break;
             case 'o':
@@ -128,11 +152,39 @@ void ofApp::keyPressed(int key){
                 farThreshold--;
                 cout << "far: " << farThreshold <<" near: "<<nearThreshold << endl;
                 break;
+            case 'r':
+                if (rec == false) {
+                    faceAnimation newAnim;
+                    faceAnimationVect.push_back(newAnim);
+                    faceAnimationPtr = &faceAnimationVect.at(faceAnimationVect.size()-1);
+                }
+                rec = !rec;
+                cout << faceAnimationVect.size() << endl;
+                break;
         }
 
     }
 }
-
+//--------------------------------------------------------------
+void ofApp::audioIn( ofSoundBuffer& buffer ){
+    
+    if (rec && faceAnimationPtr != NULL) {
+        faceAnimationPtr->soundBuffer.append(buffer);
+    }
+}
+//--------------------------------------------------------------
+void ofApp::audioOut(ofSoundBuffer &outBuffer){
+    
+    if (play && faceAnimationPtr != NULL && bufferCounter < faceAnimationPtr->soundBuffer.getNumFrames()/(outBuffer.getNumFrames()) ) {
+        auto nChannel = outBuffer.getNumChannels();
+        for (int i = 0; i < outBuffer.getNumFrames(); i++) {
+            
+            outBuffer.getBuffer()[i*nChannel]= outBuffer.getBuffer()[i*nChannel + 1] = faceAnimationPtr->soundBuffer.getBuffer()[i + bufferCounter * outBuffer.getNumFrames()];
+        }
+        bufferCounter++;
+    }
+    
+}
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key){
 

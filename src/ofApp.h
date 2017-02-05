@@ -9,6 +9,16 @@
 #include "ofxFaceTracker2.h"
 #include "ofxCv.h"
 
+class faceAnimation {
+    public:
+    ofSoundBuffer soundBuffer;
+    vector<ofVec3f>  face;
+    
+    
+};
+
+
+
 class ofApp : public ofBaseApp{
 
 	public:
@@ -27,24 +37,34 @@ class ofApp : public ofBaseApp{
 		void windowResized(int w, int h);
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
+        void audioIn(ofSoundBuffer& buffer);
+        void audioOut(ofSoundBuffer &outBuffer);
+
     
-        bool debug;
-        ofxKinect kinect;
-        int nearThreshold;
-        int farThreshold;
+    bool debug;
+    ofxKinect kinect;
+    int nearThreshold;
+    int farThreshold;
     
-        ofxCvGrayscaleImage grayImage; 
-        ofxCvGrayscaleImage grayThreshNear;
-        ofxCvGrayscaleImage grayThreshFar;
-        ofxCvGrayscaleImage grayImageMap;
+    ofxCvGrayscaleImage grayImage;
+    ofxCvGrayscaleImage grayThreshNear;
+    ofxCvGrayscaleImage grayThreshFar;
+    ofxCvGrayscaleImage grayImageMap;
     
-        ofxColorMap         colormap;
-        ofImage             imageColor,imageGray;
-        ofFbo               imageFbo;
-        ofxMultiFboBlur     imageBlur;
+    ofxColorMap         colormap;
+    ofImage             imageColor,imageGray;
+    ofFbo               imageFbo;
+    ofxMultiFboBlur     imageBlur;
     
         //ofxFaceTrackerThreaded trackerFace;
-        ofxFaceTracker2 trackerFace;
+    ofxFaceTracker2 trackerFace;
+    
+    vector<faceAnimation>  faceAnimationVect;
+    faceAnimation          *faceAnimationPtr;
+    bool                   rec,play;
+    ofSoundStream          soundStream;
+    int                    bufferCounter;
+
     
     
 		
