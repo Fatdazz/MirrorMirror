@@ -8,6 +8,7 @@
 #include "ofxFaceTrackerThreaded.h"
 #include "ofxFaceTracker2.h"
 #include "ofxCv.h"
+#include "FaceTrackerThreaded.h"
 
 class faceAnimation {
     public:
@@ -15,8 +16,6 @@ class faceAnimation {
     vector<ofPolyline>  face;
     
 };
-
-
 
 class ofApp : public ofBaseApp{
 
@@ -38,6 +37,9 @@ class ofApp : public ofBaseApp{
 		void gotMessage(ofMessage msg);
         void audioIn(ofSoundBuffer& buffer);
         void audioOut(ofSoundBuffer &outBuffer);
+        void exit(){
+            trackerFace.stopThread();
+        }
         void tranposeRotation(ofMatrix4x4 *_Matrix);
 
     
@@ -56,7 +58,8 @@ class ofApp : public ofBaseApp{
     ofFbo               imageFbo;
     ofxMultiFboBlur     imageBlur;
     
-    ofxFaceTrackerThreaded trackerFace;
+    ofxCv::ContourFinder   contourFinder;
+    FaceTrackerThreaded trackerFace;
     
     vector<faceAnimation>  faceAnimationVect;
     faceAnimation          *faceAnimationPtr;
@@ -64,7 +67,5 @@ class ofApp : public ofBaseApp{
     bool                   rec,play;
     ofSoundStream          soundStream;
     int                    bufferCounter;
-    
-
 		
 };

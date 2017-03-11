@@ -9,10 +9,15 @@ void ofApp::setup(){
     kinect.setRegistration(true);
     kinect.open();
     kinect.setDepthClipping(500,2000);
-    cout << kinect.getWidth() << "  " << kinect.getHeight() << "\n";
     
     // init Face traker
     trackerFace.setup();
+    
+    // init contourFinder
+    contourFinder.setMinAreaRadius(90); // ˆ determinŽ
+    contourFinder.setMaxAreaRadius(300);
+    contourFinder.setUseTargetColor(false);
+    contourFinder.setThreshold(0);
     
     grayImage.allocate(kinect.width, kinect.height);
     grayThreshFar.allocate(kinect.width, kinect.height);
@@ -21,7 +26,6 @@ void ofApp::setup(){
     imageGray.allocate(kinect.width, kinect.height, ofImageType::OF_IMAGE_GRAYSCALE);
     imageColor.allocate(kinect.width, kinect.height, ofImageType::OF_IMAGE_COLOR);
     imageFbo.allocate(kinect.width, kinect.height);
-    
     
     ofFbo::Settings fboS;
     fboS.width = ofGetWidth();
@@ -60,32 +64,40 @@ void ofApp::update(){
         
         grayImage.setFromPixels(kinect.getDepthPixels());
         
-
         ofPixels &pix = grayImage.getPixels();
         int numPixels = pix.size();
+        
         for (int i=0; i<pix.size(); i++) {
             pix[i]=ofMap(max( (int)pix[i], (int) farThreshold), farThreshold, nearThreshold, 0, 255);
         }
-        
         imageGray = grayImage.getPixels();
+        
+        contourFinder.findContours(imageGray);
+        
+        if (contourFinder.getPolylines().size() > 0 && !trackerFace.isThreadRunning()) {
+            trackerFace.startThread();
+            //cout << "start" << endl;
+        }
+        if (contourFinder.getPolylines().size() == 0 && trackerFace.isThreadRunning()) {
+            trackerFace.stopThread();
+            //cout << "stop" << endl;
+        }
+        
         colormap.apply(imageGray, imageColor);
         
         // Buffer Face
         if (trackerFace.getFound()) {
-
             ofMatrix4x4 matrix = trackerFace.getRotationMatrix();
             bufferAnimation.clear();
             bufferAnimation = trackerFace.getObjectFeature(ofxFaceTracker::ALL_FEATURES);
-            
         }
-    
     }
-
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-
+    ofSetWindowTitle(ofToString(ofGetFrameRate()));
+    
     imageBlur.beginDrawScene();
     ofClear(0,0,0);
     ofSetColor(ofColor::white);
@@ -98,6 +110,7 @@ void ofApp::draw(){
     }
     else{
         //imageFbo.draw(0, ofGetHeight()/2, ofGetWidth()/2, ofGetHeight()/2);
+        ofSetColor(ofColor::white);
         
                                         // image 1
         ofPushMatrix();
@@ -131,16 +144,18 @@ void ofApp::draw(){
             ofScale(trackerFace.getScale(),trackerFace.getScale(),0);
             trackerFace.getObjectFeature(ofxFaceTracker::ALL_FEATURES).draw();
             ofPopMatrix();
-            trackerFace.getImageFeature(ofxFaceTracker::ALL_FEATURES).draw();
+            //trackerFace.getImageFeature(ofxFaceTracker::ALL_FEATURES).draw();
         }
         
         if (faceAnimationPtr != NULL && play) {
-            
+            ofPushMatrix();
+            ofTranslate(ofGetWindowWidth()/2, ofGetWindowHeight()/2);
+            ofScale(5, 5);
+            ofSetColor(ofColor::red);
             faceAnimationPtr->face[bufferCounter].draw();
-
+            ofPopMatrix();
         }
         ofPopMatrix();
-        
     }
 
 }
