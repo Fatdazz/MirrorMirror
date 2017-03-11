@@ -56,7 +56,7 @@ void ofApp::update(){
     kinect.update();
     if (kinect.isFrameNew()) {
         
-        trackerFace.update(kinect.getPixels());
+        trackerFace.update(ofxCv::toCv(kinect.getPixels()));
         
         grayImage.setFromPixels(kinect.getDepthPixels());
         
@@ -71,27 +71,12 @@ void ofApp::update(){
         colormap.apply(imageGray, imageColor);
         
         // Buffer Face
-        if (trackerFace.getInstances().size() > 0) {
-            /*
-            ofMatrix4x4 MatrixInv =  trackerFace.getInstances()[0].getPoseMatrix();
-            MatrixInv.scale(-1, 1, 1);
-            tranposeRotation(&MatrixInv);
-            */
-            ofMatrix4x4 matrix = trackerFace.getInstances()[0].getPoseMatrix();
-            ofMatrix4x4 matrixInv;
-            matrixInv.setRotate(matrix.getRotate().inverse());
-            matrixInv.setTranslation(matrix.getTranslation());
-            matrixInv.scale(matrix.getScale());
-            ofPolyline polyFace = trackerFace.getInstances()[0].getLandmarks().getImageFeature(ofxFaceTracker2Landmarks::ALL_FEATURES);
-            //MatrixInv.scale(10, 10, 0);
-            ofPolyline temp;
-            bufferAnimation.clear();
-            for (int i=0; i<polyFace.size(); i++) {
-                temp.addVertex(polyFace[i] * matrixInv);
-                //temp.addVertex(polyFace[i]);
+        if (trackerFace.getFound()) {
 
-            }
-            bufferAnimation = temp;
+            ofMatrix4x4 matrix = trackerFace.getRotationMatrix();
+            bufferAnimation.clear();
+            bufferAnimation = trackerFace.getObjectFeature(ofxFaceTracker::ALL_FEATURES);
+            
         }
     
     }
@@ -140,9 +125,15 @@ void ofApp::draw(){
         ofTranslate(ofGetWindowWidth()/2, ofGetHeight()/2);
         ofScale(0.5, 0.5);
         
-        for (auto instance : trackerFace.getInstances()) {
-            instance.getLandmarks().getImageFeature(ofxFaceTracker2Landmarks::ALL_FEATURES).draw();
+        if (trackerFace.getFound()) {
+            ofPushMatrix();
+            ofTranslate(ofGetWindowWidth()/2, ofGetHeight()/2);
+            ofScale(trackerFace.getScale(),trackerFace.getScale(),0);
+            trackerFace.getObjectFeature(ofxFaceTracker::ALL_FEATURES).draw();
+            ofPopMatrix();
+            trackerFace.getImageFeature(ofxFaceTracker::ALL_FEATURES).draw();
         }
+        
         if (faceAnimationPtr != NULL && play) {
             
             faceAnimationPtr->face[bufferCounter].draw();
@@ -172,7 +163,7 @@ void ofApp::keyPressed(int key){
                 break;
             case 'r':
                 cout << " Rec " << endl;
-                if (rec == false && trackerFace.getInstances().size()!=0) {
+                if (rec == false && trackerFace.getFound()) {
                     faceAnimation newAnim;
                     faceAnimationVect.push_back(newAnim);
                     faceAnimationPtr = &faceAnimationVect.at(faceAnimationVect.size()-1);

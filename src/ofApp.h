@@ -56,8 +56,7 @@ class ofApp : public ofBaseApp{
     ofFbo               imageFbo;
     ofxMultiFboBlur     imageBlur;
     
-    ofxFaceTrackerThreaded trackerFace1;
-    ofxFaceTracker2 trackerFace;
+    ofxFaceTrackerThreaded trackerFace;
     
     vector<faceAnimation>  faceAnimationVect;
     faceAnimation          *faceAnimationPtr;
