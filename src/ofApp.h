@@ -38,6 +38,7 @@ class ofApp : public ofBaseApp{
 		void gotMessage(ofMessage msg);
         void audioIn(ofSoundBuffer& buffer);
         void audioOut(ofSoundBuffer &outBuffer);
+        void tranposeRotation(ofMatrix4x4 *_Matrix);
 
     
     bool debug;
@@ -55,14 +56,16 @@ class ofApp : public ofBaseApp{
     ofFbo               imageFbo;
     ofxMultiFboBlur     imageBlur;
     
-    //ofxFaceTrackerThreaded trackerFace;
+    ofxFaceTrackerThreaded trackerFace1;
     ofxFaceTracker2 trackerFace;
     
     vector<faceAnimation>  faceAnimationVect;
     faceAnimation          *faceAnimationPtr;
+    ofPolyline             Animation, bufferAnimation;
     bool                   rec,play;
     ofSoundStream          soundStream;
     int                    bufferCounter;
+    
 
 		
 };
