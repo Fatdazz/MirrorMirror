@@ -14,7 +14,7 @@ void ofApp::setup(){
     trackerFace.setup();
     
     // init contourFinder
-    contourFinder.setMinAreaRadius(90); // à determiné
+    contourFinder.setMinAreaRadius(90); // à determiné <===============================
     contourFinder.setMaxAreaRadius(300);
     contourFinder.setUseTargetColor(false);
     contourFinder.setThreshold(0);
@@ -46,7 +46,7 @@ void ofApp::setup(){
     colormap.setMapFromName("pink");
     
     int bufferSize = 256;
-    soundStream.setup(this, 2, 1, 44100, bufferSize, 4);
+    soundStream.setup(this, 2, 1, 48000, bufferSize, 4);
     rec = play = false;
     bufferCounter = 0;
     faceAnimationPtr = NULL;
@@ -76,11 +76,11 @@ void ofApp::update(){
         
         if (contourFinder.getPolylines().size() > 0 && !trackerFace.isThreadRunning()) {
             trackerFace.startThread();
-            //cout << "start" << endl;
+            cout << "start" << endl;
         }
         if (contourFinder.getPolylines().size() == 0 && trackerFace.isThreadRunning()) {
             trackerFace.stopThread();
-            //cout << "stop" << endl;
+            cout << "stop" << endl;
         }
         
         colormap.apply(imageGray, imageColor);
@@ -270,6 +270,7 @@ void ofApp::gotMessage(ofMessage msg){
 void ofApp::dragEvent(ofDragInfo dragInfo){ 
 
 }
+//--------------------------------------------------------------
 
 void ofApp::tranposeRotation(ofMatrix4x4 *_Matrix){
     
