@@ -41,6 +41,7 @@ class ofApp : public ofBaseApp{
             trackerFace.stopThread();
         }
         void tranposeRotation(ofMatrix4x4 *_Matrix);
+        vector<int> consecutive(int start, int end);
 
     
     bool debug;

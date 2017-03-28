@@ -118,6 +118,7 @@ protected:
             }
             
             dataMutex.lock();
+            
             objectPointsMiddle = threadedTracker->getObjectPoints();
             imagePointsMiddle = threadedTracker->getImagePoints();
             meanObjectPointsMiddle = threadedTracker->getMeanObjectPoints();

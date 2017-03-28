@@ -87,7 +87,8 @@ void ofApp::update(){
         
         // Buffer Face
         if (trackerFace.getFound()) {
-            ofMatrix4x4 matrix = trackerFace.getRotationMatrix();
+            //ofMatrix4x4 matrix = trackerFace.getRotationMatrix();
+            //tranposeRotation(&matrix);
             bufferAnimation.clear();
             bufferAnimation = trackerFace.getObjectFeature(ofxFaceTracker::ALL_FEATURES);
         }
@@ -98,10 +99,19 @@ void ofApp::update(){
 void ofApp::draw(){
     ofSetWindowTitle(ofToString(ofGetFrameRate()));
     
+    ofMesh face = trackerFace.getImageMesh();
+    for (int i=0; i<face.getVertices().size(); i++) {
+        face.addTexCoord(face.getVertices()[i]);
+    }
+   
+    
     imageBlur.beginDrawScene();
     ofClear(0,0,0);
     ofSetColor(ofColor::white);
     imageColor.draw(0,0, ofGetWidth(), ofGetHeight());
+    imageColor.bind();
+    face.draw();
+    imageColor.unbind();
     imageBlur.endDrawScene();
     imageBlur.performBlur();
     
@@ -117,8 +127,7 @@ void ofApp::draw(){
         ofTranslate(0, 0);
         ofScale(0.5, 0.5);
         kinect.draw(0, 0);
-
-        
+        trackerFace.getImageMesh().drawWireframe();
         ofPopMatrix();
                                         // image 2
         ofPushMatrix();
@@ -135,21 +144,35 @@ void ofApp::draw(){
         ofPopMatrix();
                                         // image 4
         ofPushMatrix();
-        ofTranslate(ofGetWindowWidth()/2, ofGetHeight()/2);
+        ofTranslate(ofGetWidth()/2, ofGetHeight()/2);
         ofScale(0.5, 0.5);
         
+        
         if (trackerFace.getFound()) {
+            trackerFace.getImageFeature(ofxFaceTracker::ALL_FEATURES).draw();
+            ofSetColor(ofColor::red);
+            vector<int> vect = consecutive(48,66);
+            
+            for (int i=0; i<vect.size(); i++) {
+                ofDrawCircle(face.getVertices()[vect[i]].x, face.getVertices()[vect[i]].y, 4);
+            }
+            ofSetColor(ofColor::white);
+            
+            
+            /*
             ofPushMatrix();
             ofTranslate(ofGetWindowWidth()/2, ofGetHeight()/2);
-            ofScale(trackerFace.getScale(),trackerFace.getScale(),0);
+            ofScale(trackerFace.getScale()+3,trackerFace.getScale()+3,0);
             trackerFace.getObjectFeature(ofxFaceTracker::ALL_FEATURES).draw();
+            trackerFace.getObjectMesh().drawWireframe();
             ofPopMatrix();
-            //trackerFace.getImageFeature(ofxFaceTracker::ALL_FEATURES).draw();
+            */
+            
         }
         
         if (faceAnimationPtr != NULL && play) {
             ofPushMatrix();
-            ofTranslate(ofGetWindowWidth()/2, ofGetWindowHeight()/2);
+            ofTranslate(ofGetWidth()/2, ofGetHeight()/2);
             ofScale(5, 5);
             ofSetColor(ofColor::red);
             faceAnimationPtr->face[bufferCounter].draw();
@@ -163,6 +186,7 @@ void ofApp::draw(){
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
     if (key == ' ') debug=!debug;
+    
     if (debug) {
         switch (key) {
             case 'e':
@@ -208,7 +232,6 @@ void ofApp::audioIn( ofSoundBuffer& buffer ){
 void ofApp::audioOut(ofSoundBuffer &outBuffer){
     auto nChannel = outBuffer.getNumChannels();
     if (play && faceAnimationPtr != NULL && bufferCounter < faceAnimationPtr->soundBuffer.size()/(soundStream.getBufferSize())-1) {
-        
         for (int i = 0; i < outBuffer.getNumFrames(); i++) {
             // Lecture Audio
             outBuffer.getBuffer()[i*nChannel] = outBuffer.getBuffer()[i*nChannel + 1] = faceAnimationPtr->soundBuffer.getBuffer()[i + bufferCounter * outBuffer.getNumFrames()];
@@ -218,7 +241,6 @@ void ofApp::audioOut(ofSoundBuffer &outBuffer){
     else{
         //bufferCounter = 0;
     }
-    
 }
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key){
@@ -227,7 +249,6 @@ void ofApp::keyReleased(int key){
 
 //--------------------------------------------------------------
 void ofApp::mouseMoved(int x, int y ){
-
 
 }
 
@@ -284,12 +305,22 @@ void ofApp::tranposeRotation(ofMatrix4x4 *_Matrix){
     f += h; h = f - h; f -= h; //swap f and h
      */
     
+    // rotation
     _Matrix->_mat[0][1]+= _Matrix->_mat[1][0]; _Matrix->_mat[1][0] = _Matrix->_mat[0][1] -_Matrix->_mat[1][0]; _Matrix->_mat[0][1]-= _Matrix->_mat[1][0];
     
     _Matrix->_mat[0][2]+= _Matrix->_mat[2][0]; _Matrix->_mat[2][0] = _Matrix->_mat[0][2] -_Matrix->_mat[2][0]; _Matrix->_mat[0][2]-= _Matrix->_mat[2][0];
     
     _Matrix->_mat[2][1]+= _Matrix->_mat[1][2]; _Matrix->_mat[1][2] = _Matrix->_mat[2][1] -_Matrix->_mat[1][2]; _Matrix->_mat[2][1]-= _Matrix->_mat[1][2];
-    
+ 
+    // translation
     _Matrix->_mat[2][0]= -_Matrix->_mat[2][0]; _Matrix->_mat[2][1]= -_Matrix->_mat[2][1]; _Matrix->_mat[2][2]= -_Matrix->_mat[2][2];
-    
+}
+
+vector<int> ofApp::consecutive(int start, int end) {
+    int n = end - start;
+    vector<int> result(n);
+    for(int i = 0; i < n; i++) {
+        result[i] = start + i;
+    }
+    return result;
 }
