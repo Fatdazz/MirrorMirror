@@ -103,8 +103,13 @@ void ofApp::draw(){
     for (int i=0; i<face.getVertices().size(); i++) {
         face.addTexCoord(face.getVertices()[i]);
     }
-   
     
+    if (play) {
+        vector<int> vect = consecutive(48,66);
+        for (int i = 0; vect.size(); i++) {
+            face.setVertex(i, faceAnimationPtr->face[bufferCounter].getVertices()[i] * trackerFace.getRotationMatrix());
+        }
+    }
     imageBlur.beginDrawScene();
     ofClear(0,0,0);
     ofSetColor(ofColor::white);
@@ -149,15 +154,31 @@ void ofApp::draw(){
         
         
         if (trackerFace.getFound()) {
-            trackerFace.getImageFeature(ofxFaceTracker::ALL_FEATURES).draw();
+            //trackerFace.getImageFeature(ofxFaceTracker::ALL_FEATURES).draw();
+            ofMesh lulu = trackerFace.getObjectMesh();
+            //ofMatrix4x4 tranformation = trackerFace.getRotationMatrix();
+            //tranformation.setTranslation(trackerFace.getPosition().x,trackerFace.getPosition().x,0);
+            //tranformation.translate(trackerFace.getPosition().x,trackerFace.getPosition().y,0);
+            
+            for (int i=0; i<lulu.getVertices().size(); i++) {
+                ofVec3f point = lulu.getVertices()[i];
+                ofMatrix4x4 transformation;
+                float scale = trackerFace.getScale();
+                transformation.makeScaleMatrix(ofVec3f(scale,scale,scale));
+                transformation = transformation * trackerFace.getRotationMatrix();
+                //transformation._mat[3][0] = trackerFace.getPosition().x;
+                //transformation._mat[3][0] = trackerFace.getPosition().y;
+                point = point * transformation;
+                point = ofVec3f(point.x + trackerFace.getPosition().x,point.y + trackerFace.getPosition().y,0);
+                lulu.setVertex(i, point);
+            }
+            lulu.drawWireframe();
             ofSetColor(ofColor::red);
             vector<int> vect = consecutive(48,66);
-            
             for (int i=0; i<vect.size(); i++) {
                 ofDrawCircle(face.getVertices()[vect[i]].x, face.getVertices()[vect[i]].y, 4);
             }
             ofSetColor(ofColor::white);
-            
             
             /*
             ofPushMatrix();
@@ -167,9 +188,7 @@ void ofApp::draw(){
             trackerFace.getObjectMesh().drawWireframe();
             ofPopMatrix();
             */
-            
         }
-        
         if (faceAnimationPtr != NULL && play) {
             ofPushMatrix();
             ofTranslate(ofGetWidth()/2, ofGetHeight()/2);
