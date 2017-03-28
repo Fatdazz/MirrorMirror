@@ -332,7 +332,7 @@ void ofApp::tranposeRotation(ofMatrix4x4 *_Matrix){
     _Matrix->_mat[2][1]+= _Matrix->_mat[1][2]; _Matrix->_mat[1][2] = _Matrix->_mat[2][1] -_Matrix->_mat[1][2]; _Matrix->_mat[2][1]-= _Matrix->_mat[1][2];
  
     // translation
-    _Matrix->_mat[2][0]= -_Matrix->_mat[2][0]; _Matrix->_mat[2][1]= -_Matrix->_mat[2][1]; _Matrix->_mat[2][2]= -_Matrix->_mat[2][2];
+    _Matrix->_mat[3][0]= -_Matrix->_mat[3][0]; _Matrix->_mat[3][1]= -_Matrix->_mat[3][1]; _Matrix->_mat[3][2]= -_Matrix->_mat[3][2];
 }
 
 vector<int> ofApp::consecutive(int start, int end) {
