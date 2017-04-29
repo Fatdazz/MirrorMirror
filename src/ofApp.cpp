@@ -1,5 +1,4 @@
 #include "ofApp.h"
-
 //--------------------------------------------------------------
 void ofApp::setup(){
     
@@ -51,7 +50,6 @@ void ofApp::setup(){
     bufferCounter = 0;
     faceAnimationPtr = NULL;
 }
-
 //--------------------------------------------------------------
 void ofApp::update(){
     
@@ -94,11 +92,10 @@ void ofApp::update(){
         }
     }
 }
-
 //--------------------------------------------------------------
 void ofApp::draw(){
     ofSetWindowTitle(ofToString(ofGetFrameRate()));
-    
+     
     ofMesh face = trackerFace.getImageMesh();
     for (int i=0; i<face.getVertices().size(); i++) {
         face.addTexCoord(face.getVertices()[i]);
@@ -201,11 +198,9 @@ void ofApp::draw(){
     }
 
 }
-
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
     if (key == ' ') debug=!debug;
-    
     if (debug) {
         switch (key) {
             case 'e':
@@ -265,53 +260,43 @@ void ofApp::audioOut(ofSoundBuffer &outBuffer){
 void ofApp::keyReleased(int key){
 
 }
-
 //--------------------------------------------------------------
 void ofApp::mouseMoved(int x, int y ){
 
 }
-
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button){
 
 }
-
 //--------------------------------------------------------------
 void ofApp::mousePressed(int x, int y, int button){
 
 }
-
 //--------------------------------------------------------------
 void ofApp::mouseReleased(int x, int y, int button){
 
 }
-
 //--------------------------------------------------------------
 void ofApp::mouseEntered(int x, int y){
 
 }
-
 //--------------------------------------------------------------
 void ofApp::mouseExited(int x, int y){
 
 }
-
 //--------------------------------------------------------------
 void ofApp::windowResized(int w, int h){
 
 }
-
 //--------------------------------------------------------------
 void ofApp::gotMessage(ofMessage msg){
 
 }
-
 //--------------------------------------------------------------
 void ofApp::dragEvent(ofDragInfo dragInfo){ 
 
 }
 //--------------------------------------------------------------
-
 void ofApp::tranposeRotation(ofMatrix4x4 *_Matrix){
     
     /*
@@ -334,7 +319,6 @@ void ofApp::tranposeRotation(ofMatrix4x4 *_Matrix){
     // translation
     _Matrix->_mat[3][0]= -_Matrix->_mat[3][0]; _Matrix->_mat[3][1]= -_Matrix->_mat[3][1]; _Matrix->_mat[3][2]= -_Matrix->_mat[3][2];
 }
-
 vector<int> ofApp::consecutive(int start, int end) {
     int n = end - start;
     vector<int> result(n);
