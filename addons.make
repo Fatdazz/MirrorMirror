@@ -1,9 +1,9 @@
 ofxColorMap
 ofxCv
 ofxFaceTracker
-ofxFaceTracker2
 ofxFboBlur
 ofxKinect
+ofxKinectV2
 ofxMask
 ofxMultiFboBlur
 ofxOpenCv

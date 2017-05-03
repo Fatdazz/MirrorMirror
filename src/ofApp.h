@@ -1,12 +1,17 @@
 #pragma once
 
 #include "ofMain.h"
+#define USE_KINECT_2 1
+
+#if USE_KINECT_2
+#include "ofxKinectV2.h"
+#else
 #include "ofxKinect.h"
+#endif
 #include "ofxOpenCv.h"
 #include "ofxColorMap.h"
 #include "ofxMultiFboBlur.h"
 #include "ofxFaceTrackerThreaded.h"
-#include "ofxFaceTracker2.h"
 #include "ofxCv.h"
 #include "FaceTrackerThreaded.h"
 
@@ -45,7 +50,13 @@ class ofApp : public ofBaseApp{
 
     
     bool debug;
+#if USE_KINECT_2
+    ofxKinectV2 kinect;
+    ofTexture kinectTex;
+#else
     ofxKinect kinect;
+#endif
+    
     int nearThreshold;
     int farThreshold;
     

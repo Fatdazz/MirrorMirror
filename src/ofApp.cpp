@@ -4,10 +4,16 @@ void ofApp::setup(){
     
     debug=true;
     // init kinect
+    #if USE_KINECT_2
+    kinect.open();
+    kinect.update();
+    kinectTex.loadData(kinect.getDepthPixels());
+    #else
     kinect.init();
     kinect.setRegistration(true);
     kinect.open();
     kinect.setDepthClipping(500,2000);
+    #endif
     
     // init Face traker
     trackerFace.setup();
@@ -17,7 +23,16 @@ void ofApp::setup(){
     contourFinder.setMaxAreaRadius(300);
     contourFinder.setUseTargetColor(false);
     contourFinder.setThreshold(0);
-    
+
+#if USE_KINECT_2
+    grayImage.allocate(512, 424);
+    grayThreshFar.allocate(512, 424);
+    grayThreshNear.allocate(512, 424);
+    grayImageMap.allocate(512, 424);
+    imageGray.allocate(512, 424, ofImageType::OF_IMAGE_GRAYSCALE);
+    imageColor.allocate(1920, 1080, ofImageType::OF_IMAGE_COLOR);
+    imageFbo.allocate(1920, 1080);
+#else    
     grayImage.allocate(kinect.width, kinect.height);
     grayThreshFar.allocate(kinect.width, kinect.height);
     grayThreshNear.allocate(kinect.width, kinect.height);
@@ -25,6 +40,7 @@ void ofApp::setup(){
     imageGray.allocate(kinect.width, kinect.height, ofImageType::OF_IMAGE_GRAYSCALE);
     imageColor.allocate(kinect.width, kinect.height, ofImageType::OF_IMAGE_COLOR);
     imageFbo.allocate(kinect.width, kinect.height);
+#endif
     
     ofFbo::Settings fboS;
     fboS.width = ofGetWidth();
@@ -57,10 +73,16 @@ void ofApp::update(){
     //imageBlur.setBlurPasses(10. * ofMap(mouseY, 0, ofGetHeight(), 1, 0, true));
     kinect.update();
     if (kinect.isFrameNew()) {
-        
-        trackerFace.update(ofxCv::toCv(kinect.getPixels()));
-        
-        grayImage.setFromPixels(kinect.getDepthPixels());
+
+#if USE_KINECT_2
+      ofImage tmp;
+      tmp.setFromPixels(kinect.getRgbPixels());
+      trackerFace.update(ofxCv::toCv(tmp));        
+      grayImage.setFromPixels(kinect.getDepthPixels());
+#else
+      trackerFace.update(ofxCv::toCv(kinect.getPixels()));        
+      grayImage.setFromPixels(kinect.getDepthPixels());
+#endif
         
         ofPixels &pix = grayImage.getPixels();
         int numPixels = pix.size();
@@ -128,7 +150,13 @@ void ofApp::draw(){
         ofPushMatrix();
         ofTranslate(0, 0);
         ofScale(0.5, 0.5);
-        kinect.draw(0, 0);
+#if USE_KINECT_2
+	ofImage tmp;
+	tmp.setFromPixels(kinect.getRgbPixels());
+	tmp.draw(0, 0);
+#else
+	kinect.draw(0,0);
+#endif
         trackerFace.getImageMesh().drawWireframe();
         ofPopMatrix();
                                         // image 2
@@ -233,8 +261,14 @@ void ofApp::keyPressed(int key){
 }
 //--------------------------------------------------------------
 void ofApp::audioIn( ofSoundBuffer& buffer ){
-    
+
+#if USE_KINECT_2
+  // L'addon kinect 2 n'a pas de fonction pour si elle est connecté
+  // on se repere avec l'arrivee de nouvelles frames
+  if (rec && faceAnimationPtr != NULL && kinect.isFrameNew()) {
+#else
     if (rec && faceAnimationPtr != NULL && kinect.isConnected()) {
+#endif
         // Enregistrement Audio
         faceAnimationPtr->soundBuffer.append(buffer);
         
