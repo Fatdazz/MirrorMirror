@@ -25,13 +25,13 @@ void ofApp::setup(){
     contourFinder.setThreshold(0);
 
 #if USE_KINECT_2
-    grayImage.allocate(512, 424);
-    grayThreshFar.allocate(512, 424);
-    grayThreshNear.allocate(512, 424);
-    grayImageMap.allocate(512, 424);
-    imageGray.allocate(512, 424, ofImageType::OF_IMAGE_GRAYSCALE);
-    imageColor.allocate(1920, 1080, ofImageType::OF_IMAGE_COLOR);
-    imageFbo.allocate(1920, 1080);
+    grayImage.allocate(1080, 720);
+    grayThreshFar.allocate(1080, 720);
+    grayThreshNear.allocate(1080, 720);
+    grayImageMap.allocate(1080, 720);
+    imageGray.allocate(1080, 720, ofImageType::OF_IMAGE_GRAYSCALE);
+    imageColor.allocate(1080, 720, ofImageType::OF_IMAGE_COLOR);
+    imageFbo.allocate(1080, 720);
 #else    
     grayImage.allocate(kinect.width, kinect.height);
     grayThreshFar.allocate(kinect.width, kinect.height);
@@ -91,6 +91,8 @@ void ofApp::update(){
             pix[i]=ofMap(max( (int)pix[i], (int) farThreshold), farThreshold, nearThreshold, 0, 255);
         }
         imageGray = grayImage.getPixels();
+	imageGray.resize(1080, 720);
+	imageGray.update();
         
         contourFinder.findContours(imageGray);
         
@@ -99,7 +101,7 @@ void ofApp::update(){
             cout << "start" << endl;
         }
         if (contourFinder.getPolylines().size() == 0 && trackerFace.isThreadRunning()) {
-            trackerFace.stopThread();
+	  // trackerFace.stopThread(); << remettre ca
             cout << "stop" << endl;
         }
         
@@ -124,9 +126,11 @@ void ofApp::draw(){
     }
     
     if (play) {
-        vector<int> vect = consecutive(48,66);
-        for (int i = 0; vect.size(); i++) {
-            face.setVertex(i, faceAnimationPtr->face[bufferCounter].getVertices()[i] * trackerFace.getRotationMatrix());
+        vector<int> vect = consecutive(1,68);
+	cout << "Buffer counter: " << bufferCounter << "\n";
+	cout << "face size: " << face.getVertices().size() << "\n";
+        for (int i = 0; face.getVertices().size(); i++) {
+	  face.setVertex(i, faceAnimationPtr->face[bufferCounter].getVertices()[i] * trackerFace.getRotationMatrix());
         }
     }
     imageBlur.beginDrawScene();
@@ -279,7 +283,7 @@ void ofApp::audioIn( ofSoundBuffer& buffer ){
 //--------------------------------------------------------------
 void ofApp::audioOut(ofSoundBuffer &outBuffer){
     auto nChannel = outBuffer.getNumChannels();
-    if (play && faceAnimationPtr != NULL && bufferCounter < faceAnimationPtr->soundBuffer.size()/(soundStream.getBufferSize())-1) {
+    if (play && faceAnimationPtr != NULL && bufferCounter < (faceAnimationPtr->soundBuffer.size()/(soundStream.getBufferSize())-1)) {
         for (int i = 0; i < outBuffer.getNumFrames(); i++) {
             // Lecture Audio
             outBuffer.getBuffer()[i*nChannel] = outBuffer.getBuffer()[i*nChannel + 1] = faceAnimationPtr->soundBuffer.getBuffer()[i + bufferCounter * outBuffer.getNumFrames()];
