@@ -76,6 +76,14 @@ class ofApp : public ofBaseApp{
   faceAnimation          *faceAnimationPtr;
   ofPolyline             Animation, bufferAnimation;
   bool                   rec,play;
+
+  /*
+   * ATTENTION: il ne faut pas que d'autres logiciels utilisent du son
+   * genre firefox etc
+   * sinon ca casse tout
+   * ou alors faut faire des reglages chelou avec alsa ou jack, et flemme
+   *
+   */
   ofSoundStream          soundStream;
   int                    bufferCounter;
 		
