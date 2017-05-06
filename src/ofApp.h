@@ -15,7 +15,7 @@
 #include "ofxCv.h"
 #include "FaceTrackerThreaded.h"
 
-class faceAnimation {
+class FaceAnimation {
  public:
   ofSoundBuffer soundBuffer;
   vector<ofPolyline>  face;    
@@ -48,7 +48,9 @@ class ofApp : public ofBaseApp{
   vector<int> consecutive(int start, int end);
 
     
-  bool debug;
+  bool debug = true;
+
+
 #if USE_KINECT_2
   ofxKinectV2 kinect;
   ofTexture kinectTex;
@@ -72,8 +74,8 @@ class ofApp : public ofBaseApp{
   ofxCv::ContourFinder   contourFinder;
   FaceTrackerThreaded trackerFace;
     
-  vector<faceAnimation>  faceAnimationVect;
-  faceAnimation          *faceAnimationPtr;
+  vector<FaceAnimation>  faceAnimationVect;
+  FaceAnimation          *faceAnimationPtr;
   ofPolyline             Animation, bufferAnimation;
   bool                   rec,play;
 
@@ -86,5 +88,6 @@ class ofApp : public ofBaseApp{
    */
   ofSoundStream          soundStream;
   int                    bufferCounter;
-		
+
+  mutex audioMutex;
 };
