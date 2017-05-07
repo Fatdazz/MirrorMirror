@@ -18,7 +18,7 @@
 class FaceAnimation {
  public:
   ofSoundBuffer soundBuffer;
-  vector<ofPolyline>  face;    
+  vector<ofMesh>  face;
 };
 
 class ofApp : public ofBaseApp{
@@ -41,8 +41,9 @@ class ofApp : public ofBaseApp{
   void gotMessage(ofMessage msg);
   void audioIn(ofSoundBuffer& buffer);
   void audioOut(ofSoundBuffer &outBuffer);
-  void exit(){
-    trackerFace.stopThread();
+  void exit() {
+    trackerFace.waitForThread();
+    kinect.close();
   }
   void tranposeRotation(ofMatrix4x4 *_Matrix);
   vector<int> consecutive(int start, int end);
@@ -53,7 +54,6 @@ class ofApp : public ofBaseApp{
 
 #if USE_KINECT_2
   ofxKinectV2 kinect;
-  ofTexture kinectTex;
 #else
   ofxKinect kinect;
 #endif
@@ -76,7 +76,7 @@ class ofApp : public ofBaseApp{
     
   vector<FaceAnimation>  faceAnimationVect;
   FaceAnimation          *faceAnimationPtr;
-  ofPolyline             Animation, bufferAnimation;
+  ofMesh             Animation, bufferAnimation;
   bool                   rec,play;
 
   /*
@@ -90,4 +90,6 @@ class ofApp : public ofBaseApp{
   int                    bufferCounter;
 
   mutex audioMutex;
+
+  ofImage tmp;
 };

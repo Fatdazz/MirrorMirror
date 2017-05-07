@@ -6,8 +6,6 @@ void ofApp::setup(){
   // init kinect
 #if USE_KINECT_2
   kinect.open();
-  kinect.update();
-  kinectTex.loadData(kinect.getDepthPixels());
 #else
   kinect.init();
   kinect.setRegistration(true);
@@ -25,13 +23,13 @@ void ofApp::setup(){
   contourFinder.setThreshold(0);
 
 #if USE_KINECT_2
-  grayImage.allocate(1080, 720);
-  grayThreshFar.allocate(1080, 720);
-  grayThreshNear.allocate(1080, 720);
-  grayImageMap.allocate(1080, 720);
-  imageGray.allocate(1080, 720, ofImageType::OF_IMAGE_GRAYSCALE);
-  imageColor.allocate(1080, 720, ofImageType::OF_IMAGE_COLOR);
-  imageFbo.allocate(1080, 720);
+  grayImage.allocate(512, 424);
+  grayThreshFar.allocate(512, 424);
+  grayThreshNear.allocate(512, 424);
+  grayImageMap.allocate(512, 424);
+  imageGray.allocate(512, 424, ofImageType::OF_IMAGE_GRAYSCALE);
+  imageColor.allocate(512, 424, ofImageType::OF_IMAGE_COLOR);
+  imageFbo.allocate(512, 424);
 #else    
   grayImage.allocate(kinect.width, kinect.height);
   grayThreshFar.allocate(kinect.width, kinect.height);
@@ -76,8 +74,10 @@ void ofApp::update(){
   if (kinect.isFrameNew()) {
 
 #if USE_KINECT_2
-    ofImage tmp;
+
     tmp.setFromPixels(kinect.getRgbPixels());
+    //tmp.resize(512, 424);
+    //tmp.update();
     trackerFace.update(ofxCv::toCv(tmp));
     grayImage.setFromPixels(kinect.getDepthPixels());
 #else
@@ -92,8 +92,6 @@ void ofApp::update(){
       pix[i]=ofMap(max( (int)pix[i], (int) farThreshold), farThreshold, nearThreshold, 0, 255);
     }
     imageGray = grayImage.getPixels();
-    imageGray.resize(1080, 720);
-    imageGray.update();
         
     contourFinder.findContours(imageGray);
         
@@ -110,12 +108,7 @@ void ofApp::update(){
     colormap.apply(imageGray, imageColor);
         
     // Buffer Face
-    if (trackerFace.getFound()) {
-      //ofMatrix4x4 matrix = trackerFace.getRotationMatrix();
-      //tranposeRotation(&matrix);
-      bufferAnimation.clear();
-      bufferAnimation = trackerFace.getObjectFeature(ofxFaceTracker::ALL_FEATURES);
-    }
+    bufferAnimation = trackerFace.getObjectMesh();
   }
 }
 //--------------------------------------------------------------
@@ -137,16 +130,17 @@ void ofApp::draw(){
     }
     }
   */
-
-  imageBlur.beginDrawScene();
-  ofClear(0,0,0);
-  ofSetColor(ofColor::white);
-  imageColor.draw(0,0, ofGetWidth(), ofGetHeight());
-  imageColor.bind();
-  face.draw();
-  imageColor.unbind();
-  imageBlur.endDrawScene();
-  imageBlur.performBlur();
+  /*
+    imageBlur.beginDrawScene();
+    ofClear(0,0,0);
+    ofSetColor(ofColor::white);
+    imageColor.draw(0,0, ofGetWidth(), ofGetHeight());
+    imageColor.bind();
+    face.draw();
+    imageColor.unbind();
+    imageBlur.endDrawScene();
+    imageBlur.performBlur();
+  */
     
   if (!debug) {
     imageBlur.drawBlurFbo();
@@ -157,34 +151,35 @@ void ofApp::draw(){
     // image 1
     ofPushMatrix();
     ofTranslate(0, 0);
-    ofScale(0.5, 0.5);
+    //ofScale(0.5, 0.5);
 #if USE_KINECT_2
-    ofImage tmp;
     tmp.setFromPixels(kinect.getRgbPixels());
     tmp.draw(0, 0);
 #else
     kinect.draw(0,0);
 #endif
+    ofSetColor(ofColor::blue);
     trackerFace.getImageMesh().drawWireframe();
+    ofSetColor(ofColor::white);
     ofPopMatrix();
 
     // image 2
-
-    ofPushMatrix();
-    ofTranslate(0, 0);
-    ofScale(0.5, 0.5);
-    grayImage.draw(0, 0);
-    ofPopMatrix();
-
+    /*
+      ofPushMatrix();
+      ofTranslate(0, 0);
+      ofScale(0.5, 0.5);
+      grayImage.draw(1000, 0);
+      ofPopMatrix();
+    */
         
     // image 3
-
-    ofPushMatrix();
-    ofTranslate(0, grayImage.getHeight());
-    ofScale(0.5, 0.5);
-    imageBlur.drawBlurFbo();
-    ofPopMatrix();
-
+    /*
+      ofPushMatrix();
+      ofTranslate(0, grayImage.getHeight());
+      ofScale(0.5, 0.5);
+      imageBlur.drawBlurFbo();
+      ofPopMatrix();
+    */
 
     // image 4
     /*
@@ -233,11 +228,49 @@ void ofApp::draw(){
     */
 
     if (faceAnimationPtr != NULL && play) {
+
       ofPushMatrix();
-      ofTranslate(ofGetWidth()/2, ofGetHeight()/2);
-      ofScale(5, 5);
-      ofSetColor(ofColor::red);
-      faceAnimationPtr->face[bufferCounter].draw();
+      unique_lock<mutex> lock(audioMutex);
+      if (trackerFace.getFound()) {
+	ofMesh lulu = faceAnimationPtr->face[bufferCounter];
+	for (int i=0; i<lulu.getVertices().size(); i++) {
+	  ofVec3f point = lulu.getVertices()[i];
+	  ofMatrix4x4 transformation;
+	  float scale = trackerFace.getScale();
+	  transformation.makeScaleMatrix(ofVec3f(scale,scale,0));
+	  transformation = transformation * trackerFace.getRotationMatrix();
+	  point = point * transformation;
+	  point = ofVec3f(point.x + trackerFace.getPosition().x, point.y + trackerFace.getPosition().y,0);
+	  lulu.setVertex(i, point);
+	}
+
+	faceAnimationPtr->face[bufferCounter] = lulu;
+
+	ofMesh face = trackerFace.getImageMesh();
+	for (int i=0; i<face.getVertices().size(); i++) {
+	  face.addTexCoord(face.getVertices()[i]);
+	}
+
+	for (int i = 48; i < 66; i++) {
+	  face.setVertex(i, faceAnimationPtr->face[bufferCounter].getVertices()[i]);
+	}
+      }
+
+
+
+
+      imageBlur.beginDrawScene();
+      ofClear(0,0,0);
+      ofSetColor(ofColor::white);
+      imageColor.draw(0,0, ofGetWidth(), ofGetHeight());
+      imageColor.bind();
+      face.draw();
+      imageColor.unbind();
+      imageBlur.endDrawScene();
+      imageBlur.performBlur();
+
+      imageBlur.drawBlurFbo();
+
       ofPopMatrix();
     }
     ofPopMatrix();
@@ -246,36 +279,34 @@ void ofApp::draw(){
 }
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
-  if (key == ' ') debug=!debug;
-  if (debug) {
-    switch (key) {
-    case 'e':
-      cout << "BlurOffse: " << imageBlur.getBlurOffset() << " BlurPasses: " <<imageBlur.getBlurPasses() << endl;
-      break;
-    case 'o':
-      farThreshold++;
-      cout << "far: " << farThreshold <<" near: "<<nearThreshold << endl;
-      break;
-    case 'i':
-      farThreshold--;
-      cout << "far: " << farThreshold <<" near: "<<nearThreshold << endl;
-      break;
-    case 'r':
-      cout << " Rec " << endl;
-      if (!play && !rec && trackerFace.getFound()) {
-	faceAnimationVect.emplace_back();
-	faceAnimationPtr = &faceAnimationVect.at(faceAnimationVect.size()-1);
-	rec = !rec;
-      }
-      break;
-    case 'p':
-      cout << " Play " << endl;
-      if (rec) {
-	rec = false;
-      }
-      play=!play;
-      break;
+
+  switch (key) {
+  case 'e':
+    cout << "BlurOffse: " << imageBlur.getBlurOffset() << " BlurPasses: " <<imageBlur.getBlurPasses() << endl;
+    break;
+  case 'o':
+    farThreshold++;
+    cout << "far: " << farThreshold <<" near: "<<nearThreshold << endl;
+    break;
+  case 'i':
+    farThreshold--;
+    cout << "far: " << farThreshold <<" near: "<<nearThreshold << endl;
+    break;
+  case 'r':
+    cout << " Rec " << endl;
+    if (!play && !rec && trackerFace.getFound()) {
+      faceAnimationVect.emplace_back();
+      faceAnimationPtr = &faceAnimationVect.at(faceAnimationVect.size()-1);
+      rec = !rec;
     }
+    break;
+  case 'p':
+    cout << " Play " << endl;
+    if (rec) {
+      rec = false;
+    }
+    play=!play;
+    break;
   }
 }
 //--------------------------------------------------------------
