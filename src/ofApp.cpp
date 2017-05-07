@@ -7,7 +7,7 @@ void ofApp::setup(){
     kinect.init();
     kinect.setRegistration(true);
     kinect.open();
-    kinect.setDepthClipping(500,2000);
+    kinect.setDepthClipping(500,3000);
     
     // init Face traker
     trackerFace.setup();
@@ -42,7 +42,7 @@ void ofApp::setup(){
     nearThreshold = 255;
     farThreshold = 236;
     //farThreshold =0;
-    colormap.setMapFromName("pink");
+    colormap.setMapFromName("gist_heat");
     
     int bufferSize = 256;
     soundStream.setup(this, 2, 1, 48000, bufferSize, 4);
@@ -110,7 +110,7 @@ void ofApp::draw(){
     imageBlur.beginDrawScene();
     ofClear(0,0,0);
     ofSetColor(ofColor::white);
-    imageColor.draw(0,0, ofGetWidth(), ofGetHeight());
+    //imageColor.draw(0,0, ofGetWidth(), ofGetHeight());
     imageColor.bind();
     face.draw();
     imageColor.unbind();
