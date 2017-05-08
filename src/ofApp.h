@@ -4,7 +4,7 @@
 #define USE_KINECT_2 1
 
 #if USE_KINECT_2
-#include "ofxKinectV2.h"
+#include "ofxMultiKinectV2.h"
 #else
 #include "ofxKinect.h"
 #endif
@@ -14,6 +14,9 @@
 #include "ofxFaceTrackerThreaded.h"
 #include "ofxCv.h"
 #include "FaceTrackerThreaded.h"
+
+#include "GpuRegistration.h"
+
 
 class FaceAnimation {
  public:
@@ -53,7 +56,13 @@ class ofApp : public ofBaseApp{
 
 
 #if USE_KINECT_2
-  ofxKinectV2 kinect;
+  ofxMultiKinectV2 kinect;
+  ofShader depthShader;
+  ofShader irShader;
+  GpuRegistration gr;
+  ofTexture colorTex0;
+  ofTexture depthTex0;
+
 #else
   ofxKinect kinect;
 #endif

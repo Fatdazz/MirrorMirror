@@ -1,11 +1,60 @@
 #include "ofApp.h"
 
+#define STRINGIFY(x) #x
+
+static string depthFragmentShader =
+STRINGIFY(
+          uniform sampler2DRect tex;
+          void main()
+          {
+              vec4 col = texture2DRect(tex, gl_TexCoord[0].xy);
+              float value = col.r;
+              float low1 = 500.0;
+              float high1 = 5000.0;
+              float low2 = 1.0;
+              float high2 = 0.0;
+              float d = clamp(low2 + (value - low1) * (high2 - low2) / (high1 - low1), 0.0, 1.0);
+              if (d == 1.0) {
+                  d = 0.0;
+              }
+              gl_FragColor = vec4(vec3(d), 1.0);
+          }
+          );
+
+static string irFragmentShader =
+STRINGIFY(
+          uniform sampler2DRect tex;
+          void main()
+          {
+              vec4 col = texture2DRect(tex, gl_TexCoord[0].xy);
+              float value = col.r / 65535.0;
+              gl_FragColor = vec4(vec3(value), 1.0);
+          }
+          );
+
+
+
+#include "GpuRegistration.h"
+
+
+
 //--------------------------------------------------------------
 void ofApp::setup(){
+
+#if USE_KINECT_2
+  depthShader.setupShaderFromSource(GL_FRAGMENT_SHADER, depthFragmentShader);
+  depthShader.linkProgram();
+
+  irShader.setupShaderFromSource(GL_FRAGMENT_SHADER, irFragmentShader);
+  irShader.linkProgram();
+#endif
 
   // init kinect
 #if USE_KINECT_2
   kinect.open();
+  kinect.start();
+
+  gr.setup(kinect.getProtonect(), 2);
 #else
   kinect.init();
   kinect.setRegistration(true);
@@ -75,11 +124,13 @@ void ofApp::update(){
 
 #if USE_KINECT_2
 
-    tmp.setFromPixels(kinect.getRgbPixels());
+    tmp.setFromPixels(kinect.getColorPixelsRef());
     //tmp.resize(512, 424);
     //tmp.update();
     trackerFace.update(ofxCv::toCv(tmp));
-    grayImage.setFromPixels(kinect.getDepthPixels());
+    grayImage.setFromPixels(kinect.getDepthPixelsRef());
+
+    gr.update(grayImage.getTexture(), tmp.getTexture(), true);
 #else
     trackerFace.update(ofxCv::toCv(kinect.getPixels()));
     grayImage.setFromPixels(kinect.getDepthPixels());
@@ -153,7 +204,7 @@ void ofApp::draw(){
     ofTranslate(0, 0);
     //ofScale(0.5, 0.5);
 #if USE_KINECT_2
-    tmp.setFromPixels(kinect.getRgbPixels());
+    tmp.setFromPixels(kinect.getColorPixelsRef());
     tmp.draw(0, 0);
 #else
     kinect.draw(0,0);
@@ -240,7 +291,10 @@ void ofApp::draw(){
 	  transformation.makeScaleMatrix(ofVec3f(scale,scale,0));
 	  transformation = transformation * trackerFace.getRotationMatrix();
 	  point = point * transformation;
-	  point = ofVec3f(point.x + trackerFace.getPosition().x, point.y + trackerFace.getPosition().y,0);
+	  // float rgbRatio = 1080 / 1920;
+	  // float depthRation = 424 / 512;
+	  // float displacement = rbgRation - deptRatio;
+	  point = ofVec3f(point.x + trackerFace.getPosition().x, point.y + trackerFace.getPosition().y, 0);
 	  lulu.setVertex(i, point);
 	}
 
@@ -275,6 +329,8 @@ void ofApp::draw(){
     }
     ofPopMatrix();
   }
+
+  gr.getRegisteredTexture(true).draw(0, 0, 1920, 1080);
 
 }
 //--------------------------------------------------------------

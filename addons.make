@@ -8,3 +8,4 @@ ofxMask
 ofxMultiFboBlur
 ofxOpenCv
 ofxTiming
+ofxMultiKinectV2
