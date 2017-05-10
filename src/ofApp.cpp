@@ -3,10 +3,10 @@
 #define STRINGIFY(x) #x
 
 static string depthFragmentShader =
-STRINGIFY(
-          uniform sampler2DRect tex;
-          void main()
-          {
+  STRINGIFY(
+	    uniform sampler2DRect tex;
+	    void main()
+	    {
               vec4 col = texture2DRect(tex, gl_TexCoord[0].xy);
               float value = col.r;
               float low1 = 500.0;
@@ -15,22 +15,22 @@ STRINGIFY(
               float high2 = 0.0;
               float d = clamp(low2 + (value - low1) * (high2 - low2) / (high1 - low1), 0.0, 1.0);
               if (d == 1.0) {
-                  d = 0.0;
+		d = 0.0;
               }
               gl_FragColor = vec4(vec3(d), 1.0);
-          }
-          );
+	    }
+	    );
 
 static string irFragmentShader =
-STRINGIFY(
-          uniform sampler2DRect tex;
-          void main()
-          {
+  STRINGIFY(
+	    uniform sampler2DRect tex;
+	    void main()
+	    {
               vec4 col = texture2DRect(tex, gl_TexCoord[0].xy);
               float value = col.r / 65535.0;
               gl_FragColor = vec4(vec3(value), 1.0);
-          }
-          );
+	    }
+	    );
 
 
 
@@ -77,8 +77,8 @@ void ofApp::setup(){
   grayThreshNear.allocate(512, 424);
   grayImageMap.allocate(512, 424);
   imageGray.allocate(512, 424, ofImageType::OF_IMAGE_GRAYSCALE);
-  imageColor.allocate(512, 424, ofImageType::OF_IMAGE_COLOR);
-  imageFbo.allocate(512, 424);
+  imageColor.allocate(1920, 1080, ofImageType::OF_IMAGE_COLOR);
+  //imageFbo.allocate(512, 424);
 #else    
   grayImage.allocate(kinect.width, kinect.height);
   grayThreshFar.allocate(kinect.width, kinect.height);
@@ -86,7 +86,7 @@ void ofApp::setup(){
   grayImageMap.allocate(kinect.width, kinect.height);
   imageGray.allocate(kinect.width, kinect.height, ofImageType::OF_IMAGE_GRAYSCALE);
   imageColor.allocate(kinect.width, kinect.height, ofImageType::OF_IMAGE_COLOR);
-  imageFbo.allocate(kinect.width, kinect.height);
+  //imageFbo.allocate(kinect.width, kinect.height);
 #endif
     
   ofFbo::Settings fboS;
@@ -130,18 +130,31 @@ void ofApp::update(){
     trackerFace.update(ofxCv::toCv(tmp));
     grayImage.setFromPixels(kinect.getDepthPixelsRef());
 
-    gr.update(grayImage.getTexture(), tmp.getTexture(), true);
+    colorTex0.loadData(kinect.getColorPixelsRef());
+    depthTex0.loadData(kinect.getDepthPixelsRef());
+    //irTex0.loadData(kinect.getIrPixelsRef());
+
+    depthTex0.setTextureMinMagFilter(GL_NEAREST, GL_NEAREST);
+    //gr.update(depthTex0, colorTex0, true);
+
+    ofPixels p;
+    depthTex0.readToPixels(p);
+    grayImage.setFromPixels(p);
+
 #else
     trackerFace.update(ofxCv::toCv(kinect.getPixels()));
     grayImage.setFromPixels(kinect.getDepthPixels());
 #endif
+    /*
+      ofPixels &pix = grayImage.getPixels();
+      int numPixels = pix.size();
         
-    ofPixels &pix = grayImage.getPixels();
-    int numPixels = pix.size();
-        
-    for (int i=0; i<pix.size(); i++) {
-      pix[i]=ofMap(max( (int)pix[i], (int) farThreshold), farThreshold, nearThreshold, 0, 255);
-    }
+      for (int i=0; i<pix.size(); i++) {
+      pix[i] = ofMap(max( (int)pix[i], (int) farThreshold), farThreshold, nearThreshold, 0, 255);
+      }
+    */
+
+
     imageGray = grayImage.getPixels();
         
     contourFinder.findContours(imageGray);
@@ -155,8 +168,14 @@ void ofApp::update(){
       trackerFace.stopThread();
       cout << "stop" << endl;
     }
-        
+
+    imageGray.resize(1920, 1080);
     colormap.apply(imageGray, imageColor);
+
+
+#if USE_KINECT_2
+    gr.update(depthTex0, imageGray.getTexture(), true);
+#endif
         
     // Buffer Face
     bufferAnimation = trackerFace.getObjectMesh();
@@ -170,28 +189,7 @@ void ofApp::draw(){
   for (int i=0; i<face.getVertices().size(); i++) {
     face.addTexCoord(face.getVertices()[i]);
   }
-  /*
-    if (play) {
-    // PROBLEME ICI
-    vector<int> vect = consecutive(1,68);
-    //cout << "Buffer counter: " << bufferCounter << "\n";
-    //cout << "face size: " << face.getVertices().size() << "\n";
-    for (int i = 0; face.getVertices().size(); i++) {
-    face.setVertex(i, faceAnimationPtr->face[bufferCounter].getVertices()[i] * trackerFace.getRotationMatrix());
-    }
-    }
-  */
-  /*
-    imageBlur.beginDrawScene();
-    ofClear(0,0,0);
-    ofSetColor(ofColor::white);
-    imageColor.draw(0,0, ofGetWidth(), ofGetHeight());
-    imageColor.bind();
-    face.draw();
-    imageColor.unbind();
-    imageBlur.endDrawScene();
-    imageBlur.performBlur();
-  */
+
     
   if (!debug) {
     imageBlur.drawBlurFbo();
@@ -204,8 +202,9 @@ void ofApp::draw(){
     ofTranslate(0, 0);
     //ofScale(0.5, 0.5);
 #if USE_KINECT_2
-    tmp.setFromPixels(kinect.getColorPixelsRef());
-    tmp.draw(0, 0);
+    ofImage img;
+    img.setFromPixels(kinect.getColorPixelsRef());
+    img.draw(0, 0);
 #else
     kinect.draw(0,0);
 #endif
@@ -232,52 +231,6 @@ void ofApp::draw(){
       ofPopMatrix();
     */
 
-    // image 4
-    /*
-      ofPushMatrix();
-      ofTranslate(ofGetWidth()/2, ofGetHeight()/2);
-      ofScale(0.5, 0.5);
-    */
-
-    /*
-      if (trackerFace.getFound()) {
-      //trackerFace.getImageFeature(ofxFaceTracker::ALL_FEATURES).draw();
-      ofMesh lulu = trackerFace.getObjectMesh();
-      //ofMatrix4x4 tranformation = trackerFace.getRotationMatrix();
-      //tranformation.setTranslation(trackerFace.getPosition().x,trackerFace.getPosition().x,0);
-      //tranformation.translate(trackerFace.getPosition().x,trackerFace.getPosition().y,0);
-            
-      for (int i=0; i<lulu.getVertices().size(); i++) {
-      ofVec3f point = lulu.getVertices()[i];
-      ofMatrix4x4 transformation;
-      float scale = trackerFace.getScale();
-      transformation.makeScaleMatrix(ofVec3f(scale,scale,scale));
-      transformation = transformation * trackerFace.getRotationMatrix();
-      //transformation._mat[3][0] = trackerFace.getPosition().x;
-      //transformation._mat[3][0] = trackerFace.getPosition().y;
-      point = point * transformation;
-      point = ofVec3f(point.x + trackerFace.getPosition().x,point.y + trackerFace.getPosition().y,0);
-      lulu.setVertex(i, point);
-      }
-      lulu.drawWireframe();
-      ofSetColor(ofColor::red);
-      vector<int> vect = consecutive(48,66);
-      for (int i=0; i<vect.size(); i++) {
-      ofDrawCircle(face.getVertices()[vect[i]].x, face.getVertices()[vect[i]].y, 4);
-      }
-      ofSetColor(ofColor::white);
-            
-
-      // ofPushMatrix();
-      // ofTranslate(ofGetWindowWidth()/2, ofGetHeight()/2);
-      // ofScale(trackerFace.getScale()+3,trackerFace.getScale()+3,0);
-      // trackerFace.getObjectFeature(ofxFaceTracker::ALL_FEATURES).draw();
-      // trackerFace.getObjectMesh().drawWireframe();
-      // ofPopMatrix();
-
-      }
-    */
-
     if (faceAnimationPtr != NULL && play) {
 
       ofPushMatrix();
@@ -291,9 +244,6 @@ void ofApp::draw(){
 	  transformation.makeScaleMatrix(ofVec3f(scale,scale,0));
 	  transformation = transformation * trackerFace.getRotationMatrix();
 	  point = point * transformation;
-	  // float rgbRatio = 1080 / 1920;
-	  // float depthRation = 424 / 512;
-	  // float displacement = rbgRation - deptRatio;
 	  point = ofVec3f(point.x + trackerFace.getPosition().x, point.y + trackerFace.getPosition().y, 0);
 	  lulu.setVertex(i, point);
 	}
@@ -308,29 +258,25 @@ void ofApp::draw(){
 	for (int i = 48; i < 66; i++) {
 	  face.setVertex(i, faceAnimationPtr->face[bufferCounter].getVertices()[i]);
 	}
+
+
+	imageBlur.beginDrawScene();
+	ofClear(0,0,0);
+	ofSetColor(ofColor::white);
+	imageColor.draw(0,0);
+	imageColor.bind();
+	face.draw();
+	imageColor.unbind();
+	imageBlur.endDrawScene();
+	imageBlur.performBlur();
+
+	imageBlur.drawBlurFbo();
+
+	ofPopMatrix();
       }
-
-
-
-
-      imageBlur.beginDrawScene();
-      ofClear(0,0,0);
-      ofSetColor(ofColor::white);
-      imageColor.draw(0,0, ofGetWidth(), ofGetHeight());
-      imageColor.bind();
-      face.draw();
-      imageColor.unbind();
-      imageBlur.endDrawScene();
-      imageBlur.performBlur();
-
-      imageBlur.drawBlurFbo();
-
-      ofPopMatrix();
     }
     ofPopMatrix();
   }
-
-  gr.getRegisteredTexture(true).draw(0, 0, 1920, 1080);
 
 }
 //--------------------------------------------------------------
