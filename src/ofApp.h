@@ -101,4 +101,9 @@ class ofApp : public ofBaseApp{
   mutex audioMutex;
 
   ofImage tmp;
+
+      ofImage img;
+
+
+      bool trucAlexTropCool = false;
 };

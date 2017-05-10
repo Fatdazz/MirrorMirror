@@ -10,7 +10,7 @@ static string depthFragmentShader =
               vec4 col = texture2DRect(tex, gl_TexCoord[0].xy);
               float value = col.r;
               float low1 = 500.0;
-              float high1 = 5000.0;
+              float high1 = 750.0;
               float low2 = 1.0;
               float high2 = 0.0;
               float d = clamp(low2 + (value - low1) * (high2 - low2) / (high1 - low1), 0.0, 1.0);
@@ -127,12 +127,22 @@ void ofApp::update(){
     tmp.setFromPixels(kinect.getColorPixelsRef());
     //tmp.resize(512, 424);
     //tmp.update();
-    trackerFace.update(ofxCv::toCv(tmp));
+    //trackerFace.update(ofxCv::toCv(tmp));
     grayImage.setFromPixels(kinect.getDepthPixelsRef());
 
     colorTex0.loadData(kinect.getColorPixelsRef());
     depthTex0.loadData(kinect.getDepthPixelsRef());
     //irTex0.loadData(kinect.getIrPixelsRef());
+
+    gr.update(depthTex0, colorTex0, true);
+
+    ofPixels pp;
+    gr.getRegisteredTexture().readToPixels(pp);
+
+    img.setFromPixels(pp);
+
+    //std::cout << "img: " << img.getWidth() << " " << img.getHeight() << "\n";
+    trackerFace.update(ofxCv::toCv(img));
 
     depthTex0.setTextureMinMagFilter(GL_NEAREST, GL_NEAREST);
     //gr.update(depthTex0, colorTex0, true);
@@ -152,31 +162,27 @@ void ofApp::update(){
       for (int i=0; i<pix.size(); i++) {
       pix[i] = ofMap(max( (int)pix[i], (int) farThreshold), farThreshold, nearThreshold, 0, 255);
       }
+
     */
 
-
     imageGray = grayImage.getPixels();
-        
-    contourFinder.findContours(imageGray);
+           contourFinder.findContours(imageGray);
         
     if (contourFinder.getPolylines().size() > 0 && !trackerFace.isThreadRunning()) {
       trackerFace.startThread();
       cout << "start" << endl;
+
     }
+    //std::cout << std::boolalpha << trackerFace.getFound() << "\n";
 
     if (contourFinder.getPolylines().size() == 0 && trackerFace.isThreadRunning()) {
-      trackerFace.stopThread();
+      //trackerFace.stopThread();
       cout << "stop" << endl;
     }
 
     imageGray.resize(1920, 1080);
     colormap.apply(imageGray, imageColor);
 
-
-#if USE_KINECT_2
-    gr.update(depthTex0, imageGray.getTexture(), true);
-#endif
-        
     // Buffer Face
     bufferAnimation = trackerFace.getObjectMesh();
   }
@@ -201,15 +207,34 @@ void ofApp::draw(){
     ofPushMatrix();
     ofTranslate(0, 0);
     //ofScale(0.5, 0.5);
+    if (trucAlexTropCool) {
+      ofPixels pix;
+      depthTex0.readToPixels(pix);
+      ofImage img;
+      img.setFromPixels(kinect.getDepthPixelsRefAlex());
+      //img.resize(1024, 848);
+
+      ofTexture tex;
+      tex.loadData(img.getPixels());
+      depthShader.begin();
+      depthTex0.draw(0,0, 1024, 848);
+      depthShader.end();
+
+    } else {
+      img.draw(0, 0);
+    }
+
 #if USE_KINECT_2
-    ofImage img;
-    img.setFromPixels(kinect.getColorPixelsRef());
-    img.draw(0, 0);
+    //ofImage img;
+    //img.setFromPixels(kinect.getColorPixelsRef());
+    //img.draw(0, 0);
 #else
     kinect.draw(0,0);
 #endif
     ofSetColor(ofColor::blue);
+    imageColor.bind();
     trackerFace.getImageMesh().drawWireframe();
+    imageColor.unbind();
     ofSetColor(ofColor::white);
     ofPopMatrix();
 
@@ -258,27 +283,36 @@ void ofApp::draw(){
 	for (int i = 48; i < 66; i++) {
 	  face.setVertex(i, faceAnimationPtr->face[bufferCounter].getVertices()[i]);
 	}
-
+      }
 
 	imageBlur.beginDrawScene();
 	ofClear(0,0,0);
 	ofSetColor(ofColor::white);
+	if (trucAlexTropCool) {
 	imageColor.draw(0,0);
 	imageColor.bind();
 	face.draw();
 	imageColor.unbind();
+	} else {
+	  imageGray.resize(1024, 848);
+	  imageGray.draw(0,0);
+	  imageGray.bind();
+	  face.draw();
+	  imageGray.unbind();
+	}
 	imageBlur.endDrawScene();
 	imageBlur.performBlur();
 
 	imageBlur.drawBlurFbo();
 
 	ofPopMatrix();
-      }
     }
     ofPopMatrix();
   }
+  //gr.getRegisteredTexture().draw(0, 0);
 
 }
+
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
 
@@ -308,6 +342,9 @@ void ofApp::keyPressed(int key){
       rec = false;
     }
     play=!play;
+    break;
+  case 'w':
+    trucAlexTropCool = !trucAlexTropCool;
     break;
   }
 }
