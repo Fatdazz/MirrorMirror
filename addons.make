@@ -9,3 +9,4 @@ ofxMultiFboBlur
 ofxOpenCv
 ofxTiming
 ofxMultiKinectV2
+ofxFX

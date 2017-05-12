@@ -14,8 +14,70 @@
 #include "ofxFaceTrackerThreaded.h"
 #include "ofxCv.h"
 #include "FaceTrackerThreaded.h"
+#include "ofxFX.h"
 
 #include "GpuRegistration.h"
+
+
+static string depthVertexShader =
+  STRINGIFY(
+	    varying vec2 texCoordVarying;
+	    void main() {
+	      texCoordVarying = gl_MultiTexCoord0.xy;
+	      gl_Position = ftransform();
+	    }
+	    );
+
+static string depthFragmentShader =
+  STRINGIFY(
+	    uniform sampler2DRect tex0;
+	    varying vec2 texCoordVarying;
+
+	    void main()
+	    {
+              vec4 col = texture2DRect(tex0, texCoordVarying);
+              float value = col.r;
+              float low1 = 500.0;
+              float high1 = 750.0;
+              float low2 = 1.0;
+              float high2 = 0.0;
+              float d = clamp(low2 + (value - low1) * (high2 - low2) / (high1 - low1), 0.0, 1.0);
+              if (d == 1.0) {
+
+		d = 0.0;
+              }
+              gl_FragColor = vec4(vec3(d), 1.0);
+	    }
+	    );
+
+static string irFragmentShader =
+  STRINGIFY(
+	    uniform sampler2DRect tex;
+	    void main()
+	    {
+              vec4 col = texture2DRect(tex, gl_TexCoord[0].xy);
+              float value = col.r / 65535.0;
+              gl_FragColor = vec4(vec3(value), 1.0);
+	    }
+	    );
+
+
+class GrayShader : public ofxFXObject {
+public:
+
+  GrayShader() {
+    passes = 1;
+    internalFormat = GL_RGBA;
+    fragmentShader = depthFragmentShader;
+    vertexShader   = depthVertexShader;
+
+  }
+};
+
+constexpr int win_width = 512 * 2;
+constexpr int win_height = 424 * 2;
+constexpr int win_gray_width_kinect = 512;
+constexpr int win_gray_height_kinect = 424;
 
 
 class FaceAnimation {
@@ -49,16 +111,15 @@ class ofApp : public ofBaseApp{
     kinect.close();
   }
   void tranposeRotation(ofMatrix4x4 *_Matrix);
-  vector<int> consecutive(int start, int end);
-
     
   bool debug = true;
 
 
 #if USE_KINECT_2
   ofxMultiKinectV2 kinect;
-  ofShader depthShader;
-  ofShader irShader;
+  /*ofShader depthShader;
+    ofShader irShader;-*/
+  GrayShader depthShader;
   GpuRegistration gr;
   ofTexture colorTex0;
   ofTexture depthTex0;
@@ -69,15 +130,9 @@ class ofApp : public ofBaseApp{
     
   int nearThreshold;
   int farThreshold;
-    
-  ofxCvGrayscaleImage grayImage;
-  ofxCvGrayscaleImage grayThreshNear;
-  ofxCvGrayscaleImage grayThreshFar;
-  ofxCvGrayscaleImage grayImageMap;
-    
+
   ofxColorMap         colormap;
   ofImage             imageColor,imageGray;
-  ofFbo               imageFbo;
   ofxMultiFboBlur     imageBlur;
     
   ofxCv::ContourFinder   contourFinder;
@@ -100,10 +155,9 @@ class ofApp : public ofBaseApp{
 
   mutex audioMutex;
 
-  ofImage tmp;
+  ofImage imgGr;
+  ofPixels tmpPixels;
 
-      ofImage img;
+  ofFbo fboGray;
 
-
-      bool trucAlexTropCool = false;
 };

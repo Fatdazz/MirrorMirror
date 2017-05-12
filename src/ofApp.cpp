@@ -1,52 +1,13 @@
 #include "ofApp.h"
 
-#define STRINGIFY(x) #x
-
-static string depthFragmentShader =
-  STRINGIFY(
-	    uniform sampler2DRect tex;
-	    void main()
-	    {
-              vec4 col = texture2DRect(tex, gl_TexCoord[0].xy);
-              float value = col.r;
-              float low1 = 500.0;
-              float high1 = 750.0;
-              float low2 = 1.0;
-              float high2 = 0.0;
-              float d = clamp(low2 + (value - low1) * (high2 - low2) / (high1 - low1), 0.0, 1.0);
-              if (d == 1.0) {
-		d = 0.0;
-              }
-              gl_FragColor = vec4(vec3(d), 1.0);
-	    }
-	    );
-
-static string irFragmentShader =
-  STRINGIFY(
-	    uniform sampler2DRect tex;
-	    void main()
-	    {
-              vec4 col = texture2DRect(tex, gl_TexCoord[0].xy);
-              float value = col.r / 65535.0;
-              gl_FragColor = vec4(vec3(value), 1.0);
-	    }
-	    );
-
-
-
-#include "GpuRegistration.h"
-
 
 
 //--------------------------------------------------------------
 void ofApp::setup(){
 
-#if USE_KINECT_2
-  depthShader.setupShaderFromSource(GL_FRAGMENT_SHADER, depthFragmentShader);
-  depthShader.linkProgram();
 
-  irShader.setupShaderFromSource(GL_FRAGMENT_SHADER, irFragmentShader);
-  irShader.linkProgram();
+#if USE_KINECT_2
+
 #endif
 
   // init kinect
@@ -55,11 +16,6 @@ void ofApp::setup(){
   kinect.start();
 
   gr.setup(kinect.getProtonect(), 2);
-#else
-  kinect.init();
-  kinect.setRegistration(true);
-  kinect.open();
-  kinect.setDepthClipping(500,2000);
 #endif
     
   // init Face traker
@@ -72,26 +28,18 @@ void ofApp::setup(){
   contourFinder.setThreshold(0);
 
 #if USE_KINECT_2
-  grayImage.allocate(512, 424);
-  grayThreshFar.allocate(512, 424);
-  grayThreshNear.allocate(512, 424);
-  grayImageMap.allocate(512, 424);
-  imageGray.allocate(512, 424, ofImageType::OF_IMAGE_GRAYSCALE);
-  imageColor.allocate(1920, 1080, ofImageType::OF_IMAGE_COLOR);
-  //imageFbo.allocate(512, 424);
-#else    
-  grayImage.allocate(kinect.width, kinect.height);
-  grayThreshFar.allocate(kinect.width, kinect.height);
-  grayThreshNear.allocate(kinect.width, kinect.height);
-  grayImageMap.allocate(kinect.width, kinect.height);
-  imageGray.allocate(kinect.width, kinect.height, ofImageType::OF_IMAGE_GRAYSCALE);
-  imageColor.allocate(kinect.width, kinect.height, ofImageType::OF_IMAGE_COLOR);
-  //imageFbo.allocate(kinect.width, kinect.height);
+  imageGray.allocate(win_gray_width_kinect, win_gray_height_kinect, ofImageType::OF_IMAGE_GRAYSCALE);
+  imageColor.allocate(win_gray_width_kinect*2, win_gray_height_kinect*2, ofImageType::OF_IMAGE_COLOR);
+
+  fboGray.allocate(win_gray_width_kinect*2, win_gray_height_kinect*2, GL_RGBA);
+  fboGray.begin();
+  ofClear(255,255,255, 0);
+  fboGray.end();
 #endif
     
   ofFbo::Settings fboS;
-  fboS.width = ofGetWidth();
-  fboS.height = ofGetHeight();
+  fboS.width = win_width;
+  fboS.height = win_height;
   fboS.internalformat = GL_RGB;
 
   imageBlur.setup(fboS , 3 , 50.0f);
@@ -104,14 +52,16 @@ void ofApp::setup(){
     
   nearThreshold = 255;
   farThreshold = 236;
-  //farThreshold =0;
+
   colormap.setMapFromName("pink");
     
   int bufferSize = 256;
   soundStream.setup(this, 2, 1, 48000, bufferSize, 4);
   rec = play = false;
   bufferCounter = 0;
-  faceAnimationPtr = NULL;
+  faceAnimationPtr = nullptr;
+
+  depthShader.allocate(win_gray_width_kinect*2, win_gray_height_kinect*2, GL_RGBA);
 }
 
 //--------------------------------------------------------------
@@ -124,141 +74,89 @@ void ofApp::update(){
 
 #if USE_KINECT_2
 
-    tmp.setFromPixels(kinect.getColorPixelsRef());
-    //tmp.resize(512, 424);
-    //tmp.update();
-    //trackerFace.update(ofxCv::toCv(tmp));
-    grayImage.setFromPixels(kinect.getDepthPixelsRef());
-
+    // import textures kinect
     colorTex0.loadData(kinect.getColorPixelsRef());
     depthTex0.loadData(kinect.getDepthPixelsRef());
-    //irTex0.loadData(kinect.getIrPixelsRef());
 
+    // Calcul image superposé profondeur et couleur
     gr.update(depthTex0, colorTex0, true);
+    gr.getRegisteredTexture().readToPixels(tmpPixels);
+    imgGr.setFromPixels(tmpPixels);
 
-    ofPixels pp;
-    gr.getRegisteredTexture().readToPixels(pp);
+    // envoie superposé image au face tracker (thread)
+    trackerFace.update(ofxCv::toCv(imgGr));
 
-    img.setFromPixels(pp);
-
-    //std::cout << "img: " << img.getWidth() << " " << img.getHeight() << "\n";
-    trackerFace.update(ofxCv::toCv(img));
-
-    depthTex0.setTextureMinMagFilter(GL_NEAREST, GL_NEAREST);
+    //depthTex0.setTextureMinMagFilter(GL_NEAREST, GL_NEAREST); <-- Regarder pour lissage
     //gr.update(depthTex0, colorTex0, true);
 
-    ofPixels p;
-    depthTex0.readToPixels(p);
-    grayImage.setFromPixels(p);
 
-#else
-    trackerFace.update(ofxCv::toCv(kinect.getPixels()));
-    grayImage.setFromPixels(kinect.getDepthPixels());
+    imageGray.setFromPixels(kinect.getDepthPixelsRef());
+
 #endif
-    /*
-      ofPixels &pix = grayImage.getPixels();
-      int numPixels = pix.size();
-        
-      for (int i=0; i<pix.size(); i++) {
-      pix[i] = ofMap(max( (int)pix[i], (int) farThreshold), farThreshold, nearThreshold, 0, 255);
-      }
 
-    */
-
-    imageGray = grayImage.getPixels();
-           contourFinder.findContours(imageGray);
+    contourFinder.findContours(imageGray);
         
     if (contourFinder.getPolylines().size() > 0 && !trackerFace.isThreadRunning()) {
       trackerFace.startThread();
       cout << "start" << endl;
-
     }
-    //std::cout << std::boolalpha << trackerFace.getFound() << "\n";
 
     if (contourFinder.getPolylines().size() == 0 && trackerFace.isThreadRunning()) {
       //trackerFace.stopThread();
       cout << "stop" << endl;
     }
 
-    imageGray.resize(1920, 1080);
+    imageGray.resize(win_gray_width_kinect*2, win_gray_height_kinect*2);
+    imageGray.update();
+
+    depthShader.setTexture(colorTex0, 0);
+    depthShader.update();
+
+    //fboGray.getTexture().readToPixels(tmpPixels);
+    //imageGray.setFromPixels(tmpPixels);
+    //imageGray.update();
+
+
     colormap.apply(imageGray, imageColor);
+
 
     // Buffer Face
     bufferAnimation = trackerFace.getObjectMesh();
   }
 }
+
 //--------------------------------------------------------------
 void ofApp::draw(){
   ofSetWindowTitle(ofToString(ofGetFrameRate()));
-     
-  ofMesh face = trackerFace.getImageMesh();
-  for (int i=0; i<face.getVertices().size(); i++) {
-    face.addTexCoord(face.getVertices()[i]);
-  }
 
     
   if (!debug) {
     imageBlur.drawBlurFbo();
   } else {
-    //imageFbo.draw(0, ofGetHeight()/2, ofGetWidth()/2, ofGetHeight()/2);
+
     ofSetColor(ofColor::white);
         
     // image 1
     ofPushMatrix();
     ofTranslate(0, 0);
-    //ofScale(0.5, 0.5);
-    if (trucAlexTropCool) {
-      ofPixels pix;
-      depthTex0.readToPixels(pix);
-      ofImage img;
-      img.setFromPixels(kinect.getDepthPixelsRefAlex());
-      //img.resize(1024, 848);
-
-      ofTexture tex;
-      tex.loadData(img.getPixels());
-      depthShader.begin();
-      depthTex0.draw(0,0, 1024, 848);
-      depthShader.end();
-
-    } else {
-      img.draw(0, 0);
-    }
-
-#if USE_KINECT_2
-    //ofImage img;
-    //img.setFromPixels(kinect.getColorPixelsRef());
-    //img.draw(0, 0);
-#else
-    kinect.draw(0,0);
-#endif
+    ofScale(0.5, 0.5);
+    imageGray.draw(0, 0);
     ofSetColor(ofColor::blue);
-    imageColor.bind();
     trackerFace.getImageMesh().drawWireframe();
-    imageColor.unbind();
     ofSetColor(ofColor::white);
     ofPopMatrix();
 
     // image 2
-    /*
-      ofPushMatrix();
-      ofTranslate(0, 0);
-      ofScale(0.5, 0.5);
-      grayImage.draw(1000, 0);
-      ofPopMatrix();
-    */
-        
-    // image 3
-    /*
-      ofPushMatrix();
-      ofTranslate(0, grayImage.getHeight());
-      ofScale(0.5, 0.5);
-      imageBlur.drawBlurFbo();
-      ofPopMatrix();
-    */
 
-    if (faceAnimationPtr != NULL && play) {
+
+    if (faceAnimationPtr != nullptr && play) {
 
       ofPushMatrix();
+      ofMesh face = trackerFace.getImageMesh();
+      for (int i=0; i<face.getVertices().size(); i++) {
+	face.addTexCoord(face.getVertices()[i]);
+      }
+
       unique_lock<mutex> lock(audioMutex);
       if (trackerFace.getFound()) {
 	ofMesh lulu = faceAnimationPtr->face[bufferCounter];
@@ -275,41 +173,32 @@ void ofApp::draw(){
 
 	faceAnimationPtr->face[bufferCounter] = lulu;
 
-	ofMesh face = trackerFace.getImageMesh();
-	for (int i=0; i<face.getVertices().size(); i++) {
-	  face.addTexCoord(face.getVertices()[i]);
-	}
-
 	for (int i = 48; i < 66; i++) {
 	  face.setVertex(i, faceAnimationPtr->face[bufferCounter].getVertices()[i]);
 	}
       }
 
-	imageBlur.beginDrawScene();
-	ofClear(0,0,0);
-	ofSetColor(ofColor::white);
-	if (trucAlexTropCool) {
-	imageColor.draw(0,0);
-	imageColor.bind();
-	face.draw();
-	imageColor.unbind();
-	} else {
-	  imageGray.resize(1024, 848);
-	  imageGray.draw(0,0);
-	  imageGray.bind();
-	  face.draw();
-	  imageGray.unbind();
-	}
-	imageBlur.endDrawScene();
-	imageBlur.performBlur();
+      imageBlur.beginDrawScene();
+      ofClear(0, 0, 0);
 
-	imageBlur.drawBlurFbo();
+      imageColor.draw(0, 0);
+      imageColor.bind();
+      ofSetColor(ofColor::blue);
+      face.draw();
+      ofSetColor(ofColor::white);
+      imageColor.unbind();
+      imageBlur.endDrawScene();
 
-	ofPopMatrix();
+      imageBlur.performBlur();
+
+      imageBlur.drawBlurFbo();
+
+      ofPopMatrix();
     }
     ofPopMatrix();
   }
-  //gr.getRegisteredTexture().draw(0, 0);
+
+  depthShader.getTexture().draw(0, 0);
 
 }
 
@@ -343,9 +232,6 @@ void ofApp::keyPressed(int key){
     }
     play=!play;
     break;
-  case 'w':
-    trucAlexTropCool = !trucAlexTropCool;
-    break;
   }
 }
 //--------------------------------------------------------------
@@ -354,9 +240,9 @@ void ofApp::audioIn( ofSoundBuffer& buffer ){
     #if USE_KINECT_2
     // L'addon kinect 2 n'a pas de fonction pour si elle est connecté
     // on se repere avec l'arrivee de nouvelles frames
-    if (rec && faceAnimationPtr != NULL && kinect.isFrameNew()) {
+    if (rec && faceAnimationPtr != nullptr && kinect.isFrameNew()) {
     #else
-    if (rec && faceAnimationPtr != NULL && kinect.isConnected()) {
+    if (rec && faceAnimationPtr != nullptr && kinect.isConnected()) {
     #endif
   */
   if (rec) {
@@ -371,7 +257,7 @@ void ofApp::audioIn( ofSoundBuffer& buffer ){
 //--------------------------------------------------------------
 void ofApp::audioOut(ofSoundBuffer &outBuffer){
   auto nChannel = outBuffer.getNumChannels();
-  if (play && faceAnimationPtr != NULL && bufferCounter < (faceAnimationPtr->soundBuffer.size()/soundStream.getBufferSize())-1) {
+  if (play && faceAnimationPtr != nullptr && bufferCounter < (faceAnimationPtr->soundBuffer.size()/soundStream.getBufferSize())-1) {
     for (int i = 0; i < outBuffer.getNumFrames(); i++) {
       // Lecture Audio
       auto sample = faceAnimationPtr->soundBuffer.getBuffer()[i + bufferCounter * outBuffer.getNumFrames()];
@@ -448,11 +334,3 @@ void ofApp::tranposeRotation(ofMatrix4x4 *_Matrix){
   _Matrix->_mat[3][0]= -_Matrix->_mat[3][0]; _Matrix->_mat[3][1]= -_Matrix->_mat[3][1]; _Matrix->_mat[3][2]= -_Matrix->_mat[3][2];
 }
 
-vector<int> ofApp::consecutive(int start, int end) {
-  int n = end - start;
-  vector<int> result(n);
-  for(int i = 0; i < n; i++) {
-    result[i] = start + i;
-  }
-  return result;
-}
