@@ -40,6 +40,11 @@ void ofApp::setup(){
   fboGray.begin();
   ofClear(255,255,255, 0);
   fboGray.end();
+
+  fboColorMaskAndBackground.allocate(win_gray_width_kinect, win_gray_height_kinect, GL_RGB);
+  fboColorMaskAndBackground.begin();
+  ofClear(255,255,255, 0);
+  fboColorMaskAndBackground.end();
 #endif
     
   ofFbo::Settings fboS;
@@ -58,7 +63,7 @@ void ofApp::setup(){
   nearThreshold = 255;
   farThreshold = 236;
 
-  colormap.setMapFromName("pink");
+  colormap.setMapFromName("gist_heat");
     
   int bufferSize = 256;
   soundStream.setup(this, 2, 1, 48000, bufferSize, 32);
@@ -115,8 +120,23 @@ void ofApp::update(){
     fboGray.begin();
     ofClear(0);
     depthShader.begin();
-    //depthShader.setUniformTexture("tex", imageGray.getTexture(), 0);
     depthTex0.draw(0, 0);
+    //depthShader.setUniformTexture("tex", imageGray.getTexture(), 0);
+    if (trackerFace.getFound() && animation.getVertices().size() > 0) {
+      //ofSetColor(ofColor::green);
+      const ofMesh& m = animation;
+      //std::cout << m.getVertices()[48] << " " << m.getVertices()[60] << "\n";
+      //ofDrawCircle(m.getVertices()[48]/2, 5);
+      //ofDrawCircle(m.getVertices()[54]/2, 5);
+      /*
+      ofSetColor(ofColor::black);
+      for (unsigned int i = 4; i < 13; i++) {
+	ofDrawCircle(m.getVertices()[i]/2, 5);
+      }
+      */
+
+    }
+
     depthShader.end();
     fboGray.end();
 
@@ -156,16 +176,30 @@ void ofApp::update(){
 	  lulu.setVertex(i, point);
 	}
 
-	//animationMouth.clear();
-	//animation.setMode(OF_PRIMITIVE_LINE_STRIP);
-
+	// mouth
 	for (int i = 48; i < 66; i++) {
-	  animationMouth.setVertex(i, lulu.getVertices()[i]);
-	  animationMouth.addColor(ofColor::red);
+	  animation.setVertex(i, lulu.getVertices()[i]);
 	}
-	//animationMouth.close();
+
+	// jaw
+	for (int i = 4; i < 14; i++) {
+	  animation.setVertex(i, lulu.getVertices()[i]);
+	}
       }
     }
+    fboColorMaskAndBackground.begin();
+    imageColor.draw(0, 0);
+    //grayFboImage.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
+    imageColor.resize(win_gray_width_kinect*2, win_gray_height_kinect*2);
+    imageColor.bind();
+    ofPushMatrix();
+    ofScale(0.5, 0.5);
+    animation.draw();
+    ofPopMatrix();
+    //animationMouth.draw();
+    imageColor.unbind();
+    imageColor.resize(win_gray_width_kinect  , win_gray_height_kinect  );
+    fboColorMaskAndBackground.end();
   }
 }
 
@@ -176,11 +210,7 @@ void ofApp::draw(){
     
   if (!debug) {
     //imageBlur.drawBlurFbo();
-    imageColor.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
-    //grayFboImage.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
-    imageColor.bind();
-    animation.draw();
-    imageColor.unbind();
+    fboColorMaskAndBackground.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
   } else {
 
     ofSetColor(ofColor::white);
@@ -192,8 +222,11 @@ void ofApp::draw(){
     //imageGray.draw(0, 0);
     //fboGray.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
     grayFboImage.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
+
     ofSetColor(ofColor::blue);
     trackerFace.getImageMesh().drawWireframe();
+    ofSetColor(ofColor::white);
+
     ofSetColor(ofColor::white);
     ofPopMatrix();
 
@@ -201,15 +234,7 @@ void ofApp::draw(){
     ofPushMatrix();
     ofTranslate(win_width/2, 0);
     ofScale(0.5, 0.5);
-
-    imageColor.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
-    //grayFboImage.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
-    imageColor.resize(win_gray_width_kinect*2, win_gray_height_kinect*2);
-    imageColor.bind();
-    animation.draw();
-    animationMouth.draw();
-    imageColor.unbind();
-    imageColor.resize(win_gray_width_kinect  , win_gray_height_kinect  );
+    fboColorMaskAndBackground.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
     ofPopMatrix();
   }
 

@@ -35,8 +35,8 @@ STRINGIFY(
     {
       vec4 col = texture2DRect(tex, gl_TexCoord[0].xy);
         float value = col.r;
-        float low1 = 500.0;
-        float high1 = 750.0;
+        float low1 = 650.0;
+        float high1 = 950.0;
         float low2 = 1.0;
         float high2 = 0.0;
         float d = clamp(low2 + (value - low1) * (high2 - low2) / (high1 - low1), 0.0, 1.0);
@@ -52,6 +52,7 @@ static string irFragmentShader =
 	    uniform sampler2DRect tex;
 	    void main()
 	    {
+
               vec4 col = texture2DRect(tex, gl_TexCoord[0].xy);
               float value = col.r / 65535.0;
               gl_FragColor = vec4(vec3(value), 1.0);
@@ -128,6 +129,7 @@ class ofApp : public ofBaseApp{
   bool                   rec,play;
 
   /*
+   *
    * ATTENTION: il ne faut pas que d'autres logiciels utilisent du son
    * genre firefox etc
    * sinon ca casse tout
@@ -144,5 +146,7 @@ class ofApp : public ofBaseApp{
 
   ofFbo fboGray;
   ofImage grayFboImage;
+
+  ofFbo fboColorMaskAndBackground;
 
 };
