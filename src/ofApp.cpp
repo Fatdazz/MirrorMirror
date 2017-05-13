@@ -4,10 +4,15 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
-
+  //ofSetLogLevel(OF_LOG_VERBOSE);
 
 #if USE_KINECT_2
+  // Shader MultiKinectV2 profondeur et ir
+  depthShader.setupShaderFromSource(GL_FRAGMENT_SHADER, depthFragmentShader);
+  depthShader.linkProgram();
 
+  irShader.setupShaderFromSource(GL_FRAGMENT_SHADER, irFragmentShader);
+  irShader.linkProgram();
 #endif
 
   // init kinect
@@ -29,9 +34,9 @@ void ofApp::setup(){
 
 #if USE_KINECT_2
   imageGray.allocate(win_gray_width_kinect, win_gray_height_kinect, ofImageType::OF_IMAGE_GRAYSCALE);
-  imageColor.allocate(win_gray_width_kinect*2, win_gray_height_kinect*2, ofImageType::OF_IMAGE_COLOR);
+  imageColor.allocate(win_gray_width_kinect, win_gray_height_kinect, ofImageType::OF_IMAGE_COLOR);
 
-  fboGray.allocate(win_gray_width_kinect*2, win_gray_height_kinect*2, GL_RGBA);
+  fboGray.allocate(win_gray_width_kinect, win_gray_height_kinect, GL_RGB);
   fboGray.begin();
   ofClear(255,255,255, 0);
   fboGray.end();
@@ -56,12 +61,10 @@ void ofApp::setup(){
   colormap.setMapFromName("pink");
     
   int bufferSize = 256;
-  soundStream.setup(this, 2, 1, 48000, bufferSize, 4);
+  soundStream.setup(this, 2, 1, 48000, bufferSize, 32);
   rec = play = false;
   bufferCounter = 0;
   faceAnimationPtr = nullptr;
-
-  depthShader.allocate(win_gray_width_kinect*2, win_gray_height_kinect*2, GL_RGBA);
 }
 
 //--------------------------------------------------------------
@@ -106,22 +109,63 @@ void ofApp::update(){
       cout << "stop" << endl;
     }
 
-    imageGray.resize(win_gray_width_kinect*2, win_gray_height_kinect*2);
-    imageGray.update();
+    //imageGray.resize(win_gray_width_kinect*2, win_gray_height_kinect*2);
+    //imageGray.update();
 
-    depthShader.setTexture(colorTex0, 0);
-    depthShader.update();
+    fboGray.begin();
+    ofClear(0);
+    depthShader.begin();
+    //depthShader.setUniformTexture("tex", imageGray.getTexture(), 0);
+    depthTex0.draw(0, 0);
+    depthShader.end();
+    fboGray.end();
+
+    //std::cout << imageGray.getImageType() << "\n";
 
     //fboGray.getTexture().readToPixels(tmpPixels);
     //imageGray.setFromPixels(tmpPixels);
     //imageGray.update();
-
-
-    colormap.apply(imageGray, imageColor);
-
+    fboGray.getTexture().readToPixels(tmpPixels);
+    grayFboImage.setFromPixels(tmpPixels);
+    grayFboImage.setImageType(OF_IMAGE_GRAYSCALE);
+    //grayFboImage.update();
+    colormap.apply(grayFboImage, imageColor);
+    //imageColor.update();
 
     // Buffer Face
     bufferAnimation = trackerFace.getObjectMesh();
+
+    animation = trackerFace.getImageMesh();
+    for (int i = 0; i < animation.getVertices().size(); i++) {
+      animation.addTexCoord(ofVec2f(animation.getVertices()[i].x / 2, animation.getVertices()[i].y / 2));
+    }
+
+    if (faceAnimationPtr != nullptr && play) {
+
+      //unique_lock<mutex> lock(audioMutex);
+      if (trackerFace.getFound()) {
+	ofMesh lulu = faceAnimationPtr->face[bufferCounter];
+	for (int i = 0; i < lulu.getVertices().size(); i++) {
+	  ofVec3f point = lulu.getVertices()[i];
+	  ofMatrix4x4 transformation;
+	  float scale = trackerFace.getScale();
+	  transformation.makeScaleMatrix(ofVec3f(scale, scale, 0));
+	  transformation = transformation * trackerFace.getRotationMatrix();
+	  point = point * transformation;
+	  point = ofVec3f(point.x + trackerFace.getPosition().x, point.y + trackerFace.getPosition().y, 0);
+	  lulu.setVertex(i, point);
+	}
+
+	//animationMouth.clear();
+	//animation.setMode(OF_PRIMITIVE_LINE_STRIP);
+
+	for (int i = 48; i < 66; i++) {
+	  animationMouth.setVertex(i, lulu.getVertices()[i]);
+	  animationMouth.addColor(ofColor::red);
+	}
+	//animationMouth.close();
+      }
+    }
   }
 }
 
@@ -131,7 +175,12 @@ void ofApp::draw(){
 
     
   if (!debug) {
-    imageBlur.drawBlurFbo();
+    //imageBlur.drawBlurFbo();
+    imageColor.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
+    //grayFboImage.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
+    imageColor.bind();
+    animation.draw();
+    imageColor.unbind();
   } else {
 
     ofSetColor(ofColor::white);
@@ -140,65 +189,29 @@ void ofApp::draw(){
     ofPushMatrix();
     ofTranslate(0, 0);
     ofScale(0.5, 0.5);
-    imageGray.draw(0, 0);
+    //imageGray.draw(0, 0);
+    //fboGray.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
+    grayFboImage.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
     ofSetColor(ofColor::blue);
     trackerFace.getImageMesh().drawWireframe();
     ofSetColor(ofColor::white);
     ofPopMatrix();
 
     // image 2
+    ofPushMatrix();
+    ofTranslate(win_width/2, 0);
+    ofScale(0.5, 0.5);
 
-
-    if (faceAnimationPtr != nullptr && play) {
-
-      ofPushMatrix();
-      ofMesh face = trackerFace.getImageMesh();
-      for (int i=0; i<face.getVertices().size(); i++) {
-	face.addTexCoord(face.getVertices()[i]);
-      }
-
-      unique_lock<mutex> lock(audioMutex);
-      if (trackerFace.getFound()) {
-	ofMesh lulu = faceAnimationPtr->face[bufferCounter];
-	for (int i=0; i<lulu.getVertices().size(); i++) {
-	  ofVec3f point = lulu.getVertices()[i];
-	  ofMatrix4x4 transformation;
-	  float scale = trackerFace.getScale();
-	  transformation.makeScaleMatrix(ofVec3f(scale,scale,0));
-	  transformation = transformation * trackerFace.getRotationMatrix();
-	  point = point * transformation;
-	  point = ofVec3f(point.x + trackerFace.getPosition().x, point.y + trackerFace.getPosition().y, 0);
-	  lulu.setVertex(i, point);
-	}
-
-	faceAnimationPtr->face[bufferCounter] = lulu;
-
-	for (int i = 48; i < 66; i++) {
-	  face.setVertex(i, faceAnimationPtr->face[bufferCounter].getVertices()[i]);
-	}
-      }
-
-      imageBlur.beginDrawScene();
-      ofClear(0, 0, 0);
-
-      imageColor.draw(0, 0);
-      imageColor.bind();
-      ofSetColor(ofColor::blue);
-      face.draw();
-      ofSetColor(ofColor::white);
-      imageColor.unbind();
-      imageBlur.endDrawScene();
-
-      imageBlur.performBlur();
-
-      imageBlur.drawBlurFbo();
-
-      ofPopMatrix();
-    }
+    imageColor.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
+    //grayFboImage.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
+    imageColor.resize(win_gray_width_kinect*2, win_gray_height_kinect*2);
+    imageColor.bind();
+    animation.draw();
+    animationMouth.draw();
+    imageColor.unbind();
+    imageColor.resize(win_gray_width_kinect  , win_gray_height_kinect  );
     ofPopMatrix();
   }
-
-  depthShader.getTexture().draw(0, 0);
 
 }
 
@@ -231,6 +244,9 @@ void ofApp::keyPressed(int key){
       rec = false;
     }
     play=!play;
+    break;
+  case ' ':
+    debug = !debug;
     break;
   }
 }
