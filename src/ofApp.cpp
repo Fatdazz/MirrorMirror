@@ -25,7 +25,7 @@ void ofApp::setup(){
 
   // init Face traker
   trackerFace.setup();
-=
+
     
   // init contourFinder
   contourFinder.setMinAreaRadius(90); // à determiné <===============================
