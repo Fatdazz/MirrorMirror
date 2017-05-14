@@ -22,9 +22,10 @@ void ofApp::setup(){
 
   gr.setup(kinect.getProtonect(), 2);
 #endif
-    
+
   // init Face traker
   trackerFace.setup();
+=
     
   // init contourFinder
   contourFinder.setMinAreaRadius(90); // à determiné <===============================
@@ -59,10 +60,10 @@ void ofApp::setup(){
     
   imageBlur.setBlurOffset(2.0f);
   imageBlur.setBlurPasses(2);
-    
+
   nearThreshold = 255;
   farThreshold = 236;
-
+  //farThreshold =0;
   colormap.setMapFromName("gist_heat");
     
   int bufferSize = 256;
@@ -198,6 +199,7 @@ void ofApp::update(){
     imageColor.draw(0, 0);
     //grayFboImage.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
     imageColor.resize(win_gray_width_kinect*2, win_gray_height_kinect*2);
+
     imageColor.bind();
     ofPushMatrix();
     ofScale(0.5, 0.5);
