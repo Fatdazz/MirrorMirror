@@ -14,7 +14,10 @@
 #include "ofxFaceTrackerThreaded.h"
 #include "ofxCv.h"
 #include "FaceTrackerThreaded.h"
-
+#include <cereal/types/vector.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/archives/portable_binary.hpp>
+#include <fstream>
 #include "GpuRegistration.h"
 
 
@@ -65,10 +68,20 @@ constexpr int win_height = 424 * 2;
 constexpr int win_gray_width_kinect = 512;
 constexpr int win_gray_height_kinect = 424;
 
+class ofSoundBufferCereal : public ofSoundBuffer {
+public:
+  friend class cereal::access;
+
+  template<typename Archive>
+    void serialize(Archive& archive) {
+    archive( buffer, channels, samplerate, tickCount, soundStreamDeviceID);
+  }
+};
+
 
 class FaceAnimation {
  public:
-  ofSoundBuffer soundBuffer;
+  ofSoundBufferCereal soundBuffer;
   vector<ofMesh>  face;
 };
 
@@ -148,5 +161,7 @@ class ofApp : public ofBaseApp{
   ofImage grayFboImage;
 
   ofFbo fboColorMaskAndBackground;
+
+  int numFiles;
 
 };

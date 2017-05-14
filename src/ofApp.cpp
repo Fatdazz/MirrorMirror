@@ -70,6 +70,13 @@ void ofApp::setup(){
   rec = play = false;
   bufferCounter = 0;
   faceAnimationPtr = nullptr;
+
+  ofDirectory dir(ofToDataPath("."));
+  dir.allowExt("cereal");
+  dir.listDir();
+  numFiles = dir.getFiles().size();
+
+  std::cout << numFiles << "\n";
 }
 
 //--------------------------------------------------------------
@@ -129,10 +136,10 @@ void ofApp::update(){
       //ofDrawCircle(m.getVertices()[48]/2, 5);
       //ofDrawCircle(m.getVertices()[54]/2, 5);
       /*
-      ofSetColor(ofColor::black);
-      for (unsigned int i = 4; i < 13; i++) {
+	ofSetColor(ofColor::black);
+	for (unsigned int i = 4; i < 13; i++) {
 	ofDrawCircle(m.getVertices()[i]/2, 5);
-      }
+	}
       */
 
     }
@@ -273,6 +280,59 @@ void ofApp::keyPressed(int key){
   case ' ':
     debug = !debug;
     break;
+  case 's': {
+      ofDirectory dir(".");
+      dir.allowExt("cereal");
+
+      auto path = "soundbuffer"+std::to_string(numFiles);
+      std::ofstream os(ofToDataPath(path+".cereal"), std::ios::binary);
+      dir.createDirectory(path + "Mesh");
+      cereal::PortableBinaryOutputArchive archive( os );
+      std::cout << "save\n";
+      archive( faceAnimationVect.back().soundBuffer );
+
+      int counter = 0;
+      for (auto& mesh : faceAnimationVect.back().face) {
+	mesh.save(path + "Mesh/mesh"+std::to_string(counter)+".ply");
+	counter++;
+      }
+
+      dir.listDir();
+      numFiles = dir.getFiles().size();
+    }
+    break;
+
+    case 'l': {
+      bool found = false;
+      if (numFiles == 0) break;
+      do {
+	auto path = ofToDataPath("soundbuffer"+std::to_string((int)ofRandom(0,numFiles+1)));
+	std::ifstream os(path+".cereal", std::ios::binary);
+	if (os.is_open()) {
+	  found = true;
+	  cereal::PortableBinaryInputArchive archive( os );
+	  std::cout << "load\n";
+	  ofSoundBufferCereal faceAnimationTmp;
+	  archive( faceAnimationTmp );
+	  if (faceAnimationVect.size() == 0) {
+	    faceAnimationVect.emplace_back();
+	  }
+	  faceAnimationVect.back().soundBuffer.swap(faceAnimationTmp);
+	  std::cout << "toto\n";
+	  ofDirectory dir(path+"Mesh/");
+	  dir.listDir();
+	  dir.sort();
+
+	  faceAnimationVect.back().face.clear();
+	  for (auto& file : dir.getFiles()) {
+	    std::cout << path+"Mesh/"+file.getFileName() << "\n";
+	    faceAnimationVect.back().face.emplace_back();
+	    faceAnimationVect.back().face.back().load(path+"Mesh/"+file.getFileName());
+	  }
+	}
+      } while (!found);
+    }
+      break;
   }
 }
 //--------------------------------------------------------------
