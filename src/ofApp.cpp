@@ -5,44 +5,27 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
   //ofSetLogLevel(OF_LOG_VERBOSE);
-
-#if USE_KINECT_2
-  // Shader MultiKinectV2 profondeur et ir
-  depthShader.setupShaderFromSource(GL_FRAGMENT_SHADER, depthFragmentShader);
-  depthShader.linkProgram();
-
-  irShader.setupShaderFromSource(GL_FRAGMENT_SHADER, irFragmentShader);
-  irShader.linkProgram();
-#endif
+    ofDisableArbTex();
+    ofEnableSmoothing();
+    ofEnableAlphaBlending();
 
   // init kinect
 #if USE_KINECT_2
   kinect.open();
-  kinect.start();
 
-  gr.setup(kinect.getProtonect(), 2);
 #endif
 
   // init Face traker
   trackerFace.setup();
 
     
-  // init contourFinder
-  contourFinder.setMinAreaRadius(90); // à determiné <===============================
-  contourFinder.setMaxAreaRadius(300);
-  contourFinder.setUseTargetColor(false);
-  contourFinder.setThreshold(0);
 
 #if USE_KINECT_2
-  imageGray.allocate(win_gray_width_kinect, win_gray_height_kinect, ofImageType::OF_IMAGE_GRAYSCALE);
-  imageColor.allocate(win_gray_width_kinect, win_gray_height_kinect, ofImageType::OF_IMAGE_COLOR);
+  
+  imageColor.allocate(width_kinect, height_kinect, ofImageType::OF_IMAGE_COLOR);
 
-  fboGray.allocate(win_gray_width_kinect, win_gray_height_kinect, GL_RGB);
-  fboGray.begin();
-  ofClear(255,255,255, 0);
-  fboGray.end();
 
-  fboColorMaskAndBackground.allocate(win_gray_width_kinect, win_gray_height_kinect, GL_RGB);
+  fboColorMaskAndBackground.allocate(width_kinect, height_kinect, GL_RGB);
   fboColorMaskAndBackground.begin();
   ofClear(255,255,255, 0);
   fboColorMaskAndBackground.end();
@@ -78,87 +61,60 @@ void ofApp::setup(){
   numFiles = dir.getFiles().size();
 
   std::cout << numFiles << "\n";
+
+  fbo.allocate(win_width, win_height, GL_RGB);
+  fbo.begin();
+  ofClear(0);
+  fbo.end();
+
 }
 
 //--------------------------------------------------------------
-void ofApp::update(){
-    
+void ofApp::update() {
+
+  ofSetWindowTitle("FPS: " + std::to_string(ofGetFrameRate()));
+  
   //imageBlur.setBlurOffset(200 * ofMap(mouseX, 0, ofGetWidth(), 0, 1, true));
   //imageBlur.setBlurPasses(10. * ofMap(mouseY, 0, ofGetHeight(), 1, 0, true));
   kinect.update();
   if (kinect.isFrameNew()) {
 
+    fbo.begin();
+  ofClear(0);
+  fbo.end();
+
 #if USE_KINECT_2
 
-    // import textures kinect
-    colorTex0.loadData(kinect.getColorPixelsRef());
-    depthTex0.loadData(kinect.getDepthPixelsRef());
+    imageColor.setFromPixels(kinect.getRgbPixels());
+    imageColor.resize(win_width, win_height);
+    
+    //
+    fbo.begin();
+    filter.begin();
 
-    // Calcul image superpos√© profondeur et couleur
-    gr.update(depthTex0, colorTex0, true);
-    gr.getRegisteredTexture().readToPixels(tmpPixels);
-    imgGr.setFromPixels(tmpPixels);
+    ofPushMatrix();
+    imageColor.draw(0, 0);
+    ofPopMatrix();
 
-    // envoie superpos√© image au face tracker (thread)
-    trackerFace.update(ofxCv::toCv(imgGr));
+    filter.end();
+    fbo.end();
 
-    //depthTex0.setTextureMinMagFilter(GL_NEAREST, GL_NEAREST); <-- Regarder pour lissage
-    //gr.update(depthTex0, colorTex0, true);
-
-
-    imageGray.setFromPixels(kinect.getDepthPixelsRef());
-
+    
 #endif
 
-    contourFinder.findContours(imageGray);
-        
-    if (contourFinder.getPolylines().size() > 0 && !trackerFace.isThreadRunning()) {
+    if (!trackerFace.isThreadRunning()) {
       trackerFace.startThread();
-      cout << "start" << endl;
     }
 
-    if (contourFinder.getPolylines().size() == 0 && trackerFace.isThreadRunning()) {
-      //trackerFace.stopThread();
-      cout << "stop" << endl;
-    }
+    ofPixels pixels;
 
-    //imageGray.resize(win_gray_width_kinect*2, win_gray_height_kinect*2);
-    //imageGray.update();
+    fbo.getTexture().readToPixels(pixels);
+    grayImage.setFromPixels(pixels);
 
-    fboGray.begin();
-    ofClear(0);
-    depthShader.begin();
-    depthTex0.draw(0, 0);
-    //depthShader.setUniformTexture("tex", imageGray.getTexture(), 0);
-    if (trackerFace.getFound() && animation.getVertices().size() > 0) {
-      //ofSetColor(ofColor::green);
-      const ofMesh& m = animation;
-      //std::cout << m.getVertices()[48] << " " << m.getVertices()[60] << "\n";
-      //ofDrawCircle(m.getVertices()[48]/2, 5);
-      //ofDrawCircle(m.getVertices()[54]/2, 5);
-      /*
-	ofSetColor(ofColor::black);
-	for (unsigned int i = 4; i < 13; i++) {
-	ofDrawCircle(m.getVertices()[i]/2, 5);
-	}
-      */
+    trackerFace.update(ofxCv::toCv(imageColor));
+    
 
-    }
-
-    depthShader.end();
-    fboGray.end();
-
-    //std::cout << imageGray.getImageType() << "\n";
-
-    //fboGray.getTexture().readToPixels(tmpPixels);
-    //imageGray.setFromPixels(tmpPixels);
-    //imageGray.update();
-    fboGray.getTexture().readToPixels(tmpPixels);
-    grayFboImage.setFromPixels(tmpPixels);
-    grayFboImage.setImageType(OF_IMAGE_GRAYSCALE);
-    //grayFboImage.update();
-    colormap.apply(grayFboImage, imageColor);
-    //imageColor.update();
+    //colormap.apply(grayImage, imageColor);
 
     // Buffer Face
     bufferAnimation = trackerFace.getObjectMesh();
@@ -198,16 +154,14 @@ void ofApp::update(){
     fboColorMaskAndBackground.begin();
     imageColor.draw(0, 0);
     //grayFboImage.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
-    imageColor.resize(win_gray_width_kinect*2, win_gray_height_kinect*2);
 
     imageColor.bind();
     ofPushMatrix();
-    ofScale(0.5, 0.5);
+    //ofScale(0.5, 0.5);
     animation.draw();
     ofPopMatrix();
     //animationMouth.draw();
     imageColor.unbind();
-    imageColor.resize(win_gray_width_kinect  , win_gray_height_kinect  );
     fboColorMaskAndBackground.end();
   }
 }
@@ -219,7 +173,8 @@ void ofApp::draw(){
     
   if (!debug) {
     //imageBlur.drawBlurFbo();
-    fboColorMaskAndBackground.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
+    fboColorMaskAndBackground.draw(0, 0, width_kinect, height_kinect);
+    grayImage.draw(0, 0, width_kinect, height_kinect);
   } else {
 
     ofSetColor(ofColor::white);
@@ -227,10 +182,11 @@ void ofApp::draw(){
     // image 1
     ofPushMatrix();
     ofTranslate(0, 0);
+
     ofScale(0.5, 0.5);
-    //imageGray.draw(0, 0);
-    //fboGray.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
-    grayFboImage.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
+    imageColor.draw(0, 0);
+    ofTranslate(width_kinect, 0);
+    grayImage.draw(0, 0);
 
     ofSetColor(ofColor::blue);
     trackerFace.getImageMesh().drawWireframe();
@@ -240,12 +196,12 @@ void ofApp::draw(){
     ofPopMatrix();
 
     // image 2
-    ofPushMatrix();
-    ofTranslate(win_width/2, 0);
-    ofScale(0.5, 0.5);
-    fboColorMaskAndBackground.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
-    ofPopMatrix();
+
+    fboColorMaskAndBackground.draw(0, height_kinect);
+
+    
   }
+
 
 }
 
