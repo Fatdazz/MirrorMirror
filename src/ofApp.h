@@ -2,6 +2,7 @@
 
 #include "ofMain.h"
 #define USE_KINECT_2 1
+#define USE_Memory 0
 
 #if USE_KINECT_2
 #include "ofxMultiKinectV2.h"
@@ -14,10 +15,12 @@
 #include "ofxFaceTrackerThreaded.h"
 #include "ofxCv.h"
 #include "FaceTrackerThreaded.h"
+#if USE_Memory
 #include <cereal/types/vector.hpp>
 #include <cereal/types/memory.hpp>
 #include <cereal/archives/portable_binary.hpp>
 #include <fstream>
+#endif
 #include "GpuRegistration.h"
 
 
@@ -70,8 +73,9 @@ constexpr int win_gray_height_kinect = 424;
 
 class ofSoundBufferCereal : public ofSoundBuffer {
 public:
+    /*
   friend class cereal::access;
-
+     */
   template<typename Archive>
     void serialize(Archive& archive) {
     archive( buffer, channels, samplerate, tickCount, soundStreamDeviceID);

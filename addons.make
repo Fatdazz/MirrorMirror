@@ -4,9 +4,9 @@ ofxFaceTracker
 ofxFaceTracker2
 ofxFboBlur
 ofxKinect
+ofxKinectV2
 ofxMask
 ofxMultiFboBlur
+ofxMultiKinectV2
 ofxOpenCv
 ofxTiming
-ofxKinectV2
-ofxMultiKinectV2

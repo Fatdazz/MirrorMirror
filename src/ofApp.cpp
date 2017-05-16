@@ -283,6 +283,7 @@ void ofApp::keyPressed(int key){
     debug = !debug;
     break;
   case 's': {
+      #if USE_Memory
       ofDirectory dir(".");
       dir.allowExt("cereal");
 
@@ -301,10 +302,13 @@ void ofApp::keyPressed(int key){
 
       dir.listDir();
       numFiles = dir.getFiles().size();
+      #endif
     }
+    
     break;
 
     case 'l': {
+    #if USE_Memory
       bool found = false;
       if (numFiles == 0) break;
       do {
@@ -333,8 +337,9 @@ void ofApp::keyPressed(int key){
 	  }
 	}
       } while (!found);
+    #endif
     }
-      break;
+    break;
   }
 }
 //--------------------------------------------------------------
