@@ -109,12 +109,24 @@ void ofApp::setup(){
 
 //--------------------------------------------------------------
 void ofApp::update(){
+
+
+
+  //std::cout << "position: " << position << "\n";
+  //std::cout << "rotation: " << rotation << "\n";
+  //std::cout << "scale: " << scale << "\n";
+  
+  contourFinder.setMinAreaRadius(ttt); // ˆ determinŽ <===============================
+  contourFinder.setMaxAreaRadius(300);
+  contourFinder.setUseTargetColor(false);
+
+
     
   //imageBlur.setBlurOffset(200 * ofMap(mouseX, 0, ofGetWidth(), 0, 1, true));
   //imageBlur.setBlurPasses(10. * ofMap(mouseY, 0, ofGetHeight(), 1, 0, true));
 
   blur.blurOffset = 3;
-  blur.blurPasses = 3;
+  blur.blurPasses = 0.15;
   blur.numBlurOverlays = 1;
   blur.blurOverlayGain = 255;
   
@@ -242,7 +254,7 @@ void ofApp::update(){
 	}
 
 	// jaw
-	for (int i = 4; i < 14; i++) {
+	for (int i = 2; i < 16; i++) {
 	  animation.setVertex(i, lulu.getVertices()[i]/2);
 	}
       }
@@ -273,11 +285,15 @@ void ofApp::update(){
 
 
     colormap.apply(temp, imageColor);
+
+    imageColor.mirror(false, true);
   }
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
+
+  ofBackground(0);
 
   if (!debug) {
     //imageBlur.drawBlurFbo();
@@ -290,9 +306,11 @@ void ofApp::draw(){
     ofTranslate(-(position.x+imageColor.getWidth()/2), -(position.y+imageColor.getHeight()/2));
     imageColor.draw(0, 0, 0, win_width , win_height);
     ofPopMatrix();
+    /*
     ofSetColor(ofColor::blue);
     trackerFace.getImageMesh().drawWireframe();
     ofSetColor(ofColor::white);
+    */
     ofPopMatrix();
   } else {
 
@@ -305,11 +323,11 @@ void ofApp::draw(){
     //imageGray.draw(0, 0);
     //fboGray.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
     grayFboImage.draw(0, 0, win_width , win_height);
-
+    
     ofSetColor(ofColor::blue);
     trackerFace.getImageMesh().drawWireframe();
     ofSetColor(ofColor::white);
-
+    
     ofSetColor(ofColor::white);
     ofPopMatrix();
 
@@ -344,6 +362,12 @@ void ofApp::keyPressed(int key){
       saveImage.save("img-gray-"+std::to_string(ofGetElapsedTimeMillis())+".png");
       break;
     */
+  case 't':
+    ttt+=1;
+    break;
+  case 'y':
+    ttt-=1;
+    break;
   case OF_KEY_LEFT:
     position.x -= 1.0;
     break;
@@ -458,6 +482,8 @@ void ofApp::keyPressed(int key){
 #endif
 
   }
+
+    std::cout << ttt << "\n";
 }
 //--------------------------------------------------------------
 void ofApp::audioIn( ofSoundBuffer& buffer ){
@@ -480,7 +506,7 @@ void ofApp::audioIn( ofSoundBuffer& buffer ){
   }
 }
 //--------------------------------------------------------------
-void ofApp::audioOut(ofSoundBuffer &outBuffer){
+void ofApp::audioOut(ofSoundBuffer &outBuffer) {
   auto nChannel = outBuffer.getNumChannels();
   if (debug) {
     if (play && faceAnimationPtr != nullptr && bufferCounter < (faceAnimationPtr->soundBuffer.size()/soundStream.getBufferSize())-1) {
@@ -490,6 +516,7 @@ void ofApp::audioOut(ofSoundBuffer &outBuffer){
 	sample = faceAnimationPtr->soundBuffer.getBuffer()[i + bufferCounter * outBuffer.getNumFrames()];
 	outBuffer.getSample(i, 0) = sample;
 	outBuffer.getSample(i, 1) = sample;
+	std::cout << "son\n";
       }
       bufferCounter++;
     } else {

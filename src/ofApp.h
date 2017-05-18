@@ -84,8 +84,8 @@ STRINGIFY(
     {
       vec4 col = texture2DRect(tex, gl_TexCoord[0].xy);
         float value = col.r;
-        float low1 = 650.0;
-        float high1 = 950.0;
+        float low1 = 500.0;
+        float high1 = 800.0;
         float low2 = 1.0;
         float high2 = 0.0;
         float d = clamp(low2 + (value - low1) * (high2 - low2) / (high1 - low1), 0.0, 1.0);
@@ -225,9 +225,11 @@ class ofApp : public ofBaseApp{
 
   bool timerReset;
 
-  float rotation;
-  ofVec2f position = {0, 0};
-  ofVec2f scale = {1, 1};
+  float rotation = 90;
+  ofVec2f position = {341, 190};
+  ofVec2f scale = {1.2, 1.2};
+
+  float ttt = 0.0;
 
   
 };
