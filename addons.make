@@ -1,14 +1,11 @@
 ofxColorMap
-ofxMask
 ofxCv
-ofxOpenCv
-ofxKinectV2
 ofxFaceTracker
-ofxGui
-ofxOsc
-ofxFilterLibrary
-ofxMask
 ofxFboBlur
+ofxKinect
+ofxKinectV2
+ofxMask
 ofxMultiFboBlur
-
+ofxMultiKinectV2
+ofxOpenCv
 

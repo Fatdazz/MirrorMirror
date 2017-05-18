@@ -1,48 +1,50 @@
 #include "ofApp.h"
 
 
-
 //--------------------------------------------------------------
 void ofApp::setup(){
   //ofSetLogLevel(OF_LOG_VERBOSE);
-    ofDisableArbTex();
-    ofEnableSmoothing();
-    ofEnableAlphaBlending();
+
+#if USE_KINECT_2
+  // Shader MultiKinectV2 profondeur et ir
+  depthShader.setupShaderFromSource(GL_FRAGMENT_SHADER, depthFragmentShader);
+  depthShader.linkProgram();
+
+  irShader.setupShaderFromSource(GL_FRAGMENT_SHADER, irFragmentShader);
+  irShader.linkProgram();
+#endif
 
   // init kinect
 #if USE_KINECT_2
   kinect.open();
+  kinect.start();
 
+  gr.setup(kinect.getProtonect(), 2);
 #endif
 
   // init Face traker
   trackerFace.setup();
 
-    
+  // init contourFinder
+  contourFinder.setMinAreaRadius(90); // à determiné <===============================
+  contourFinder.setMaxAreaRadius(300);
+  contourFinder.setUseTargetColor(false);
+  contourFinder.setThreshold(0);
 
 #if USE_KINECT_2
-  
-  imageColor.allocate(width_kinect, height_kinect, ofImageType::OF_IMAGE_COLOR);
+  imageGray.allocate(win_gray_width_kinect, win_gray_height_kinect, ofImageType::OF_IMAGE_GRAYSCALE);
+  imageColor.allocate(win_gray_width_kinect, win_gray_height_kinect, ofImageType::OF_IMAGE_COLOR);
 
+  fboGray.allocate(win_gray_width_kinect, win_gray_height_kinect, GL_RGB);
+  fboGray.begin();
+  ofClear(255,255,255, 0);
+  fboGray.end();
 
-  fboColorMaskAndBackground.allocate(width_kinect, height_kinect, GL_RGB);
+  fboColorMaskAndBackground.allocate(win_gray_width_kinect, win_gray_height_kinect, GL_RGB);
   fboColorMaskAndBackground.begin();
   ofClear(255,255,255, 0);
   fboColorMaskAndBackground.end();
 #endif
-    
-  ofFbo::Settings fboS;
-  fboS.width = win_width;
-  fboS.height = win_height;
-  fboS.internalformat = GL_RGB;
-
-  imageBlur.setup(fboS , 3 , 50.0f);
-  imageBlur.setNumBlurOverlays(1);
-  imageBlur.setBlurOffset(0.2);
-  imageBlur.setBlurPasses(2);
-    
-  imageBlur.setBlurOffset(2.0f);
-  imageBlur.setBlurPasses(2);
 
   nearThreshold = 255;
   farThreshold = 236;
@@ -55,6 +57,20 @@ void ofApp::setup(){
   bufferCounter = 0;
   faceAnimationPtr = nullptr;
 
+
+  ofFbo::Settings s;
+  s.width = win_width/2;
+  s.height = win_height/2;
+  s.internalformat = GL_RGBA;
+
+  s.maxFilter = GL_LINEAR;
+  s.numSamples = 0;
+  s.numColorbuffers = 1;
+  s.useDepth = false;
+  s.useStencil = false;
+
+  blur.setup(s, false);
+
   ofDirectory dir(ofToDataPath("."));
   dir.allowExt("cereal");
   dir.listDir();
@@ -62,73 +78,140 @@ void ofApp::setup(){
 
   std::cout << numFiles << "\n";
 
-  fbo.allocate(win_width, win_height, GL_RGB);
-  fbo.begin();
-  ofClear(0);
-  fbo.end();
+  for (auto f : dir.getFiles()) {
+    std::cout << f.getFileName() << "\n";
+  }
 
+  for (unsigned int i = 0; i < numFiles; i++) {
+    auto path = ofToDataPath("soundbuffer"+std::to_string(i));
+    std::ifstream os(path+".cereal", std::ios::binary);
+    if (os.is_open()) {
+      cereal::PortableBinaryInputArchive archive( os );
+      ofSoundBufferCereal faceAnimationTmp;
+      archive( faceAnimationTmp );
+      finalAnimations.emplace_back();
+      finalAnimations.back().soundBuffer.swap(faceAnimationTmp);
+      ofDirectory dir(path+"Mesh/");
+      dir.listDir();
+      dir.sort();
+      
+      finalAnimations.back().face.clear();
+      for (auto& file : dir.getFiles()) {
+	finalAnimations.back().face.emplace_back();
+	finalAnimations.back().face.back().load(path+"Mesh/"+file.getFileName());
+      }
+    }
+  }
+
+  randomAnimation = ofRandom(numFiles);
 }
+  
 
 //--------------------------------------------------------------
-void ofApp::update() {
-
-  ofSetWindowTitle("FPS: " + std::to_string(ofGetFrameRate()));
-  
+void ofApp::update(){
+    
   //imageBlur.setBlurOffset(200 * ofMap(mouseX, 0, ofGetWidth(), 0, 1, true));
   //imageBlur.setBlurPasses(10. * ofMap(mouseY, 0, ofGetHeight(), 1, 0, true));
+
+  blur.blurOffset = 3;
+  blur.blurPasses = 3;
+  blur.numBlurOverlays = 1;
+  blur.blurOverlayGain = 255;
+  
   kinect.update();
   if (kinect.isFrameNew()) {
 
-    fbo.begin();
-  ofClear(0);
-  fbo.end();
-
 #if USE_KINECT_2
 
-    imageColor.setFromPixels(kinect.getRgbPixels());
-    imageColor.resize(win_width, win_height);
-    
-    //
-    fbo.begin();
-    filter.begin();
+    // import textures kinect
+    colorTex0.loadData(kinect.getColorPixelsRef());
+    depthTex0.loadData(kinect.getDepthPixelsRef());
 
-    ofPushMatrix();
-    imageColor.draw(0, 0);
-    ofPopMatrix();
+    // Calcul image superpos√© profondeur et couleur
+    gr.update(depthTex0, colorTex0, true);
+    gr.getRegisteredTexture().readToPixels(tmpPixels);
+    imgGr.setFromPixels(tmpPixels);
 
-    filter.end();
-    fbo.end();
+    // envoie superpos√© image au face tracker (thread)
+    trackerFace.update(ofxCv::toCv(imgGr));
 
-    
+    //depthTex0.setTextureMinMagFilter(GL_NEAREST, GL_NEAREST); <-- Regarder pour lissage
+    //gr.update(depthTex0, colorTex0, true);
+
+    imageGray.setFromPixels(kinect.getDepthPixelsRef());
+
 #endif
 
-    if (!trackerFace.isThreadRunning()) {
+    contourFinder.findContours(imageGray);
+        
+    if (contourFinder.getPolylines().size() > 0 && !trackerFace.isThreadRunning()) {
       trackerFace.startThread();
+      cout << "start" << endl;
+    } else {
+      ofSetWindowTitle(ofToString(ofGetFrameRate()));
     }
 
-    ofPixels pixels;
+    if (!debug && trackerFace.getFound()) {
+      if (!incomingPerson.isStarted() && !play) {
+	std::cout << "Found someone!\n";
+	incomingPerson.start();
+	std::cout << "here: " << randomAnimation << "\n";
+      }
+      ofSetWindowTitle(ofToString(ofGetFrameRate()) + " FOUND " + std::to_string(incomingPerson.getElapsedMillis()));
+    } else {
+      if (!exitPerson.isStarted()) {
+	exitPerson.start();
+	incomingPerson.stop();
+      } else {
+	exitPerson.reset();
+      }
+    }
+    
+    if (!debug && trackerFace.getFound()) {
+      if (contourFinder.getPolylines().size() == 0 && trackerFace.isThreadRunning()) {
+	trackerFace.stopThread();
+	cout << "stop" << endl;
+      }
+    }
 
-    fbo.getTexture().readToPixels(pixels);
-    grayImage.setFromPixels(pixels);
-
-    trackerFace.update(ofxCv::toCv(imageColor));
+    if (!debug && finalAnimations[randomAnimation].face.size()  <= bufferCounter) {
+      incomingPerson.stop();
+      play = false;
+      timerReset = false;
+    }
     
 
-    //colormap.apply(grayImage, imageColor);
-
+    if (!debug && contourFinder.size() > 0 && incomingPerson.getElapsedMillis() > 3000) {
+      ofSetWindowTitle(ofToString(ofGetFrameRate()) + " PLAYING");
+      play = true;
+      timerReset = false;
+    }
+   
+    if (!debug && exitPerson.getElapsedMillis() > 3000) {
+     	exitPerson.stop();
+     	play = false;
+    }
+    
     // Buffer Face
     bufferAnimation = trackerFace.getObjectMesh();
 
     animation = trackerFace.getImageMesh();
+    //animation.enableTextures();
     for (int i = 0; i < animation.getVertices().size(); i++) {
-      animation.addTexCoord(ofVec2f(animation.getVertices()[i].x / 2, animation.getVertices()[i].y / 2));
+      animation.getVertices()[i] = animation.getVertices()[i]/2;
+      //animation.addTexCoord(ofVec2f(animation.getVertices()[i].x/2 , animation.getVertices()[i].y/2));
     }
+      
+    if (play) {
 
-    if (faceAnimationPtr != nullptr && play) {
-
-      //unique_lock<mutex> lock(audioMutex);
+      unique_lock<mutex> lock(audioMutex);
       if (trackerFace.getFound()) {
-	ofMesh lulu = faceAnimationPtr->face[bufferCounter];
+	ofMesh lulu;
+	if (debug && faceAnimationPtr) {
+	  lulu = faceAnimationPtr->face[bufferCounter];
+	} else {
+	  lulu = finalAnimations[randomAnimation].face[bufferCounter];
+	}
 	for (int i = 0; i < lulu.getVertices().size(); i++) {
 	  ofVec3f point = lulu.getVertices()[i];
 	  ofMatrix4x4 transformation;
@@ -142,39 +225,62 @@ void ofApp::update() {
 
 	// mouth
 	for (int i = 48; i < 66; i++) {
-	  animation.setVertex(i, lulu.getVertices()[i]);
+	  animation.setVertex(i, lulu.getVertices()[i]/2);
 	}
 
 	// jaw
 	for (int i = 4; i < 14; i++) {
-	  animation.setVertex(i, lulu.getVertices()[i]);
+	  animation.setVertex(i, lulu.getVertices()[i]/2);
 	}
       }
     }
-    fboColorMaskAndBackground.begin();
-    imageColor.draw(0, 0);
-    //grayFboImage.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
 
-    imageColor.bind();
-    ofPushMatrix();
-    //ofScale(0.5, 0.5);
+    
+    fboGray.begin();
+    ofClear(0);
+    depthShader.begin();
+    depthTex0.draw(0, 0);
+    depthShader.end();
+    fboGray.end();
+
+
+    fboGray.getTexture().readToPixels(tmpPixels);
+    grayFboImage.setFromPixels(tmpPixels);
+    grayFboImage.setImageType(OF_IMAGE_GRAYSCALE);
+      
+    temp = grayFboImage;
+    temp.resize(win_width, win_height);
+      
+    fboColorMaskAndBackground.begin();
+    ofClear(255,255,255, 0);
+    grayFboImage.draw(0, 0);
+    temp.bind();
     animation.draw();
-    ofPopMatrix();
-    //animationMouth.draw();
-    imageColor.unbind();
+    temp.unbind();
     fboColorMaskAndBackground.end();
+
+
+    blur.beginDrawScene();
+    fboColorMaskAndBackground.draw(0, 0);
+    blur.endDrawScene();
+    
+    blur.performBlur();
+    
+    blur.getBlurredSceneFbo().getTexture().readToPixels(tmpPixels);
+    temp.setFromPixels(tmpPixels);
+    temp.setImageType(OF_IMAGE_GRAYSCALE);
+
+
+    colormap.apply(temp, imageColor);
   }
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-  ofSetWindowTitle(ofToString(ofGetFrameRate()));
 
-    
   if (!debug) {
     //imageBlur.drawBlurFbo();
-    fboColorMaskAndBackground.draw(0, 0, width_kinect, height_kinect);
-    grayImage.draw(0, 0, width_kinect, height_kinect);
+    imageColor.draw(0, 0, win_width , win_height);
   } else {
 
     ofSetColor(ofColor::white);
@@ -182,11 +288,10 @@ void ofApp::draw(){
     // image 1
     ofPushMatrix();
     ofTranslate(0, 0);
-
     ofScale(0.5, 0.5);
-    imageColor.draw(0, 0);
-    ofTranslate(width_kinect, 0);
-    grayImage.draw(0, 0);
+    //imageGray.draw(0, 0);
+    //fboGray.draw(0, 0, win_gray_width_kinect*2, win_gray_height_kinect*2);
+    grayFboImage.draw(0, 0, win_width , win_height);
 
     ofSetColor(ofColor::blue);
     trackerFace.getImageMesh().drawWireframe();
@@ -196,12 +301,19 @@ void ofApp::draw(){
     ofPopMatrix();
 
     // image 2
-
-    fboColorMaskAndBackground.draw(0, height_kinect);
-
-    
+    ofPushMatrix();
+    ofTranslate(win_width/2, 0);
+    ofScale(0.5, 0.5);
+    imageColor.draw(0, 0, win_width , win_height);
+    ofPopMatrix();
+      
+    // image 3
+    ofPushMatrix();
+    ofTranslate(0, win_height/2);
+    ofScale(0.5, 0.5);
+    fboColorMaskAndBackground.draw(0, 0, win_width , win_height);
+    ofPopMatrix();
   }
-
 
 }
 
@@ -209,8 +321,17 @@ void ofApp::draw(){
 void ofApp::keyPressed(int key){
 
   switch (key) {
+    /*
+      case 'k':
+      colorTex0.readToPixels(tmpPixels);
+      saveImage.setFromPixels(tmpPixels);
+      saveImage.save("img-"+std::to_string(ofGetElapsedTimeMillis())+".png");
+      depthTex0.readToPixels(tmpPixels);
+      saveImage.setFromPixels(tmpPixels);
+      saveImage.save("img-gray-"+std::to_string(ofGetElapsedTimeMillis())+".png");
+      break;
+    */
   case 'e':
-    cout << "BlurOffse: " << imageBlur.getBlurOffset() << " BlurPasses: " <<imageBlur.getBlurPasses() << endl;
     break;
   case 'o':
     farThreshold++;
@@ -238,59 +359,61 @@ void ofApp::keyPressed(int key){
   case ' ':
     debug = !debug;
     break;
+#if USE_Memory
   case 's': {
-      ofDirectory dir(".");
-      dir.allowExt("cereal");
+    ofDirectory dir(".");
+    dir.allowExt("cereal");
 
-      auto path = "soundbuffer"+std::to_string(numFiles);
-      std::ofstream os(ofToDataPath(path+".cereal"), std::ios::binary);
-      dir.createDirectory(path + "Mesh");
-      cereal::PortableBinaryOutputArchive archive( os );
-      std::cout << "save\n";
-      archive( faceAnimationVect.back().soundBuffer );
+    auto path = "soundbuffer"+std::to_string(numFiles);
+    std::ofstream os(ofToDataPath(path+".cereal"), std::ios::binary);
+    dir.createDirectory(path + "Mesh");
+    cereal::PortableBinaryOutputArchive archive( os );
+    std::cout << "save\n";
+    archive( faceAnimationVect.back().soundBuffer );
 
-      int counter = 0;
-      for (auto& mesh : faceAnimationVect.back().face) {
-	mesh.save(path + "Mesh/mesh"+std::to_string(counter)+".ply");
-	counter++;
-      }
-
-      dir.listDir();
-      numFiles = dir.getFiles().size();
+    int counter = 0;
+    for (auto& mesh : faceAnimationVect.back().face) {
+      mesh.save(path + "Mesh/mesh"+std::to_string(counter)+".ply");
+      counter++;
     }
+
+    dir.listDir();
+    numFiles = dir.getFiles().size();
+  }
     break;
-
-    case 'l': {
-      bool found = false;
-      if (numFiles == 0) break;
-      do {
-	auto path = ofToDataPath("soundbuffer"+std::to_string((int)ofRandom(0,numFiles+1)));
-	std::ifstream os(path+".cereal", std::ios::binary);
-	if (os.is_open()) {
-	  found = true;
-	  cereal::PortableBinaryInputArchive archive( os );
-	  std::cout << "load\n";
-	  ofSoundBufferCereal faceAnimationTmp;
-	  archive( faceAnimationTmp );
-	  if (faceAnimationVect.size() == 0) {
-	    faceAnimationVect.emplace_back();
-	  }
-	  faceAnimationVect.back().soundBuffer.swap(faceAnimationTmp);
-	  std::cout << "toto\n";
-	  ofDirectory dir(path+"Mesh/");
-	  dir.listDir();
-	  dir.sort();
-
-	  faceAnimationVect.back().face.clear();
-	  for (auto& file : dir.getFiles()) {
-	    std::cout << path+"Mesh/"+file.getFileName() << "\n";
-	    faceAnimationVect.back().face.emplace_back();
-	    faceAnimationVect.back().face.back().load(path+"Mesh/"+file.getFileName());
-	  }
+  case 'l': {
+    bool found = false;
+    if (numFiles == 0) break;
+    do {
+      auto path = ofToDataPath("soundbuffer"+std::to_string((int)ofRandom(0,numFiles+1)));
+      std::ifstream os(path+".cereal", std::ios::binary);
+      if (os.is_open()) {
+	found = true;
+	cereal::PortableBinaryInputArchive archive( os );
+	std::cout << "load\n";
+	ofSoundBufferCereal faceAnimationTmp;
+	archive( faceAnimationTmp );
+	if (faceAnimationVect.size() == 0) {
+	  faceAnimationVect.emplace_back();
 	}
-      } while (!found);
-    }
-      break;
+	faceAnimationVect.back().soundBuffer.swap(faceAnimationTmp);
+	std::cout << "toto\n";
+	ofDirectory dir(path+"Mesh/");
+	dir.listDir();
+	dir.sort();
+
+	faceAnimationVect.back().face.clear();
+	for (auto& file : dir.getFiles()) {
+	  std::cout << path+"Mesh/"+file.getFileName() << "\n";
+	  faceAnimationVect.back().face.emplace_back();
+	  faceAnimationVect.back().face.back().load(path+"Mesh/"+file.getFileName());
+	}
+      }
+    } while (!found);
+  }
+    break;
+#endif
+
   }
 }
 //--------------------------------------------------------------
@@ -316,17 +439,42 @@ void ofApp::audioIn( ofSoundBuffer& buffer ){
 //--------------------------------------------------------------
 void ofApp::audioOut(ofSoundBuffer &outBuffer){
   auto nChannel = outBuffer.getNumChannels();
-  if (play && faceAnimationPtr != nullptr && bufferCounter < (faceAnimationPtr->soundBuffer.size()/soundStream.getBufferSize())-1) {
-    for (int i = 0; i < outBuffer.getNumFrames(); i++) {
-      // Lecture Audio
-      auto sample = faceAnimationPtr->soundBuffer.getBuffer()[i + bufferCounter * outBuffer.getNumFrames()];
-      outBuffer.getSample(i, 0) = sample;
-      outBuffer.getSample(i, 1) = sample;
+  if (debug) {
+    if (play && faceAnimationPtr != nullptr && bufferCounter < (faceAnimationPtr->soundBuffer.size()/soundStream.getBufferSize())-1) {
+      for (int i = 0; i < outBuffer.getNumFrames(); i++) {
+	// Lecture Audio
+	float sample;
+	sample = faceAnimationPtr->soundBuffer.getBuffer()[i + bufferCounter * outBuffer.getNumFrames()];
+	outBuffer.getSample(i, 0) = sample;
+	outBuffer.getSample(i, 1) = sample;
+      }
+      bufferCounter++;
+    } else {
+      play = false;
+      bufferCounter = 0;
     }
-    bufferCounter++;
   } else {
-    play = false;
-    bufferCounter = 0;
+    if (play && bufferCounter < (finalAnimations[randomAnimation].soundBuffer.size()/soundStream.getBufferSize())-1) {
+      for (int i = 0; i < outBuffer.getNumFrames(); i++) {
+	// Lecture Audio
+	float sample;
+	sample = finalAnimations[randomAnimation].soundBuffer.getBuffer()[i+bufferCounter*outBuffer.getNumFrames()];
+	  
+	outBuffer.getSample(i, 0) = sample;
+	outBuffer.getSample(i, 1) = sample;
+      }
+      bufferCounter++;
+    }  else {
+      
+      if (!timerReset) {
+	timerReset = true;
+	incomingPerson.stop();
+	randomAnimation = ofRandom(numFiles);
+      }
+      
+      play = false;
+      bufferCounter = 0;      
+    }
   }
 }
 //--------------------------------------------------------------

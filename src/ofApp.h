@@ -2,35 +2,123 @@
 
 #include "ofMain.h"
 #define USE_KINECT_2 1
+#define USE_Memory 1
+
 
 #if USE_KINECT_2
-#include "ofxKinectV2.h"
+#include "ofxMultiKinectV2.h"
 #else
 #include "ofxKinect.h"
 #endif
 #include "ofxOpenCv.h"
 #include "ofxColorMap.h"
-#include "ofxMultiFboBlur.h"
+#include "ofxFboBlur.h"
 #include "ofxFaceTrackerThreaded.h"
 #include "ofxCv.h"
 #include "FaceTrackerThreaded.h"
+#include "GpuRegistration.h"
+#if USE_Memory
 #include <cereal/types/vector.hpp>
 #include <cereal/types/memory.hpp>
 #include <cereal/archives/portable_binary.hpp>
 #include <fstream>
-#include "ofxFilterLibrary.h"
+#endif
 
 
+class Timer {
+  uint64_t startTime;
+  bool isPlaying;
+public:
+  Timer() {
+    startTime = 0;
+    isPlaying = false;
+  }
 
-constexpr int win_width = 1920;
-constexpr int win_height = 1080;
-constexpr int width_kinect = 1920;
-constexpr int height_kinect = 1080;
+  uint64_t getStartTime() {
+    return startTime;
+  }
+
+  void start() {
+    if (!isPlaying) {
+      isPlaying = true;
+      startTime = ofGetElapsedTimeMillis();
+    }
+  }
+
+  bool isStarted() {
+    return isPlaying;
+  }
+
+  uint64_t getElapsedMillis() {
+    if (isPlaying) {
+      return ofGetElapsedTimeMillis() - startTime;
+    } else {
+      return 0;
+    }
+  }
+
+  void stop() {
+    startTime = 0;
+    isPlaying = false;
+  }
+    
+  void reset() {
+    startTime = ofGetElapsedTimeMillis();
+  }
+};
+
+
+static string depthVertexShader =
+  STRINGIFY(
+	    varying vec2 texCoordVarying;
+	    void main() {
+	      texCoordVarying = gl_MultiTexCoord0.xy;
+	      gl_Position = ftransform();
+	    }
+	    );
+
+static string depthFragmentShader =
+STRINGIFY(
+    uniform sampler2DRect tex;
+    void main()
+    {
+      vec4 col = texture2DRect(tex, gl_TexCoord[0].xy);
+        float value = col.r;
+        float low1 = 650.0;
+        float high1 = 950.0;
+        float low2 = 1.0;
+        float high2 = 0.0;
+        float d = clamp(low2 + (value - low1) * (high2 - low2) / (high1 - low1), 0.0, 1.0);
+        if (d == 1.0) {
+            d = 0.0;
+        }
+      gl_FragColor = vec4(vec3(d), 1.0);
+    }
+);
+
+static string irFragmentShader =
+  STRINGIFY(
+	    uniform sampler2DRect tex;
+	    void main()
+	    {
+
+              vec4 col = texture2DRect(tex, gl_TexCoord[0].xy);
+              float value = col.r / 65535.0;
+              gl_FragColor = vec4(vec3(value), 1.0);
+	    }
+	    );
+
+
+constexpr int win_width = 512 * 2;
+constexpr int win_height = 424 * 2;
+constexpr int win_gray_width_kinect = 512;
+constexpr int win_gray_height_kinect = 424;
 
 class ofSoundBufferCereal : public ofSoundBuffer {
 public:
+#if USE_Memory
   friend class cereal::access;
-
+#endif
   template<typename Archive>
     void serialize(Archive& archive) {
     archive( buffer, channels, samplerate, tickCount, soundStreamDeviceID);
@@ -47,11 +135,6 @@ class FaceAnimation {
 class ofApp : public ofBaseApp{
 
  public:
-
-
-	ofApp() : filter(win_width, win_height) {
-	}
-
   void setup();
   void update();
   void draw();
@@ -72,6 +155,7 @@ class ofApp : public ofBaseApp{
   void exit() {
     trackerFace.waitForThread();
     kinect.close();
+    soundStream.stop();
   }
   void tranposeRotation(ofMatrix4x4 *_Matrix);
     
@@ -79,8 +163,12 @@ class ofApp : public ofBaseApp{
 
 
 #if USE_KINECT_2
-  ofxKinectV2 kinect;
-  SobelEdgeDetectionFilter filter;
+  ofxMultiKinectV2 kinect;
+  ofShader depthShader;
+  ofShader irShader;
+  GpuRegistration gr;
+  ofTexture colorTex0;
+  ofTexture depthTex0;
 
 #else
   ofxKinect kinect;
@@ -91,14 +179,15 @@ class ofApp : public ofBaseApp{
 
   ofxColorMap         colormap;
   ofImage             imageColor,imageGray;
-  ofxMultiFboBlur     imageBlur;
-  
+    
+  ofxCv::ContourFinder   contourFinder;
   FaceTrackerThreaded trackerFace;
     
   vector<FaceAnimation>  faceAnimationVect;
+  vector<FaceAnimation>  finalAnimations;
   FaceAnimation          *faceAnimationPtr;
   ofMesh             animation, bufferAnimation, animationMouth;
-  bool                   rec,play;
+  bool                   rec = false,play = false;
 
   /*
    *
@@ -109,7 +198,7 @@ class ofApp : public ofBaseApp{
    *
    */
   ofSoundStream          soundStream;
-  int                    bufferCounter;
+  int                    bufferCounter = 0;
 
   mutex audioMutex;
 
@@ -117,12 +206,22 @@ class ofApp : public ofBaseApp{
   ofPixels tmpPixels;
 
   ofFbo fboGray;
-  ofImage grayImage;
+  ofImage grayFboImage;
 
   ofFbo fboColorMaskAndBackground;
 
   int numFiles;
 
-  ofFbo fbo;
 
+  ofxFboBlur blur;
+
+  Timer incomingPerson;
+  Timer exitPerson;
+
+  int randomAnimation = 0;
+
+  ofImage temp;
+  ofImage saveImage;
+
+  bool timerReset;
 };
