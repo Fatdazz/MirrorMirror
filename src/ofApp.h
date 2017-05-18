@@ -224,4 +224,10 @@ class ofApp : public ofBaseApp{
   ofImage saveImage;
 
   bool timerReset;
+
+  float rotation;
+  ofVec2f position = {0, 0};
+  ofVec2f scale = {1, 1};
+
+  
 };

@@ -26,7 +26,7 @@ void ofApp::setup(){
   trackerFace.setup();
 
   // init contourFinder
-  contourFinder.setMinAreaRadius(90); // à determiné <===============================
+  contourFinder.setMinAreaRadius(80); // à determiné <===============================
   contourFinder.setMaxAreaRadius(300);
   contourFinder.setUseTargetColor(false);
   contourFinder.setThreshold(0);
@@ -142,35 +142,48 @@ void ofApp::update(){
 
 #endif
 
-    contourFinder.findContours(imageGray);
+     
+    fboGray.begin();
+    ofClear(0);
+    depthShader.begin();
+    depthTex0.draw(0, 0);
+    depthShader.end();
+    fboGray.end();
+
+
+    fboGray.getTexture().readToPixels(tmpPixels);
+    grayFboImage.setFromPixels(tmpPixels);
+    grayFboImage.setImageType(OF_IMAGE_GRAYSCALE);
+      
+    temp = grayFboImage;
+
+    contourFinder.findContours(temp);
         
     if (contourFinder.getPolylines().size() > 0 && !trackerFace.isThreadRunning()) {
       trackerFace.startThread();
-      cout << "start" << endl;
-    } else {
-      ofSetWindowTitle(ofToString(ofGetFrameRate()));
+      cout << "start" << endl;    
     }
 
     if (!debug && trackerFace.getFound()) {
       if (!incomingPerson.isStarted() && !play) {
 	std::cout << "Found someone!\n";
 	incomingPerson.start();
-	std::cout << "here: " << randomAnimation << "\n";
+	//std::cout << "here: " << randomAnimation << "\n";
       }
       ofSetWindowTitle(ofToString(ofGetFrameRate()) + " FOUND " + std::to_string(incomingPerson.getElapsedMillis()));
-    } else {
-      if (!exitPerson.isStarted()) {
-	exitPerson.start();
-	incomingPerson.stop();
-      } else {
-	exitPerson.reset();
-      }
     }
-    
-    if (!debug && trackerFace.getFound()) {
-      if (contourFinder.getPolylines().size() == 0 && trackerFace.isThreadRunning()) {
-	trackerFace.stopThread();
-	cout << "stop" << endl;
+
+    if (contourFinder.getPolylines().size() == 0 && trackerFace.isThreadRunning()) {
+      trackerFace.stopThread();
+      cout << "stop" << endl;
+      if (!debug) {
+	if (!exitPerson.isStarted()) {
+	  std::cout << "stop person\n";
+	  exitPerson.start();
+	  incomingPerson.stop();
+	} else {
+	  exitPerson.reset();
+	}
       }
     }
 
@@ -181,15 +194,15 @@ void ofApp::update(){
     }
     
 
-    if (!debug && contourFinder.size() > 0 && incomingPerson.getElapsedMillis() > 3000) {
+    if (!debug && contourFinder.size() > 0 && incomingPerson.getElapsedMillis() > 3000 && trackerFace.isThreadRunning()) {
       ofSetWindowTitle(ofToString(ofGetFrameRate()) + " PLAYING");
       play = true;
       timerReset = false;
     }
    
-    if (!debug && exitPerson.getElapsedMillis() > 3000) {
-     	exitPerson.stop();
-     	play = false;
+    if (!debug && exitPerson.getElapsedMillis() > 1000) {
+      exitPerson.stop();
+      play = false;
     }
     
     // Buffer Face
@@ -235,20 +248,7 @@ void ofApp::update(){
       }
     }
 
-    
-    fboGray.begin();
-    ofClear(0);
-    depthShader.begin();
-    depthTex0.draw(0, 0);
-    depthShader.end();
-    fboGray.end();
-
-
-    fboGray.getTexture().readToPixels(tmpPixels);
-    grayFboImage.setFromPixels(tmpPixels);
-    grayFboImage.setImageType(OF_IMAGE_GRAYSCALE);
-      
-    temp = grayFboImage;
+   
     temp.resize(win_width, win_height);
       
     fboColorMaskAndBackground.begin();
@@ -261,6 +261,7 @@ void ofApp::update(){
 
 
     blur.beginDrawScene();
+    ofClear(0);
     fboColorMaskAndBackground.draw(0, 0);
     blur.endDrawScene();
     
@@ -280,11 +281,23 @@ void ofApp::draw(){
 
   if (!debug) {
     //imageBlur.drawBlurFbo();
-    imageColor.draw(0, 0, win_width , win_height);
+    ofPushMatrix();
+    ofTranslate(position);
+    ofScale(scale);
+    ofPushMatrix();
+    ofTranslate(position.x+imageColor.getWidth()/2, position.y+imageColor.getHeight()/2);
+    ofRotate(rotation, 0, 0, 1);
+    ofTranslate(-(position.x+imageColor.getWidth()/2), -(position.y+imageColor.getHeight()/2));
+    imageColor.draw(0, 0, 0, win_width , win_height);
+    ofPopMatrix();
+    ofSetColor(ofColor::blue);
+    trackerFace.getImageMesh().drawWireframe();
+    ofSetColor(ofColor::white);
+    ofPopMatrix();
   } else {
 
     ofSetColor(ofColor::white);
-        
+
     // image 1
     ofPushMatrix();
     ofTranslate(0, 0);
@@ -331,6 +344,36 @@ void ofApp::keyPressed(int key){
       saveImage.save("img-gray-"+std::to_string(ofGetElapsedTimeMillis())+".png");
       break;
     */
+  case OF_KEY_LEFT:
+    position.x -= 1.0;
+    break;
+  case OF_KEY_RIGHT:
+    position.x += 1.0;
+    break;
+  case OF_KEY_UP:
+    position.y -= 1.0;
+    break;
+  case OF_KEY_DOWN:
+    position.y += 1.0;
+    break;
+  case '1':
+    rotation += 90;
+    break;
+  case '3':
+    rotation -= 90;
+    break;
+  case '7':
+    scale.x += 0.1;
+    break;
+  case '4':
+    scale.x -= 0.1;
+    break;
+  case '9':
+    scale.y += 0.1;
+    break;
+  case '6':
+    scale.y -= 0.1;
+    break;
   case 'e':
     break;
   case 'o':
