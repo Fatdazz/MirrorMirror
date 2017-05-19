@@ -159,7 +159,7 @@ class ofApp : public ofBaseApp{
   }
   void tranposeRotation(ofMatrix4x4 *_Matrix);
     
-  bool debug = true;
+  bool debug = false;
 
 
 #if USE_KINECT_2

@@ -348,6 +348,9 @@ void ofApp::draw(){
     ofTranslate(win_width/2, 0);
     ofScale(0.5, 0.5);
     imageColor.draw(0, 0, win_width , win_height);
+    ofSetColor(ofColor::blue);
+    trackerFace.getImageMesh().drawWireframe();
+    ofSetColor(ofColor::white);
     ofPopMatrix();
       
     // image 3
@@ -355,6 +358,9 @@ void ofApp::draw(){
     ofTranslate(0, win_height/2);
     ofScale(0.5, 0.5);
     fboColorMaskAndBackground.draw(0, 0, win_width , win_height);
+    ofSetColor(ofColor::blue);
+    trackerFace.getImageMesh().drawWireframe();
+    ofSetColor(ofColor::white);
     ofPopMatrix();
   }
 
