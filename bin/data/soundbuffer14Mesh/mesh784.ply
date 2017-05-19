@@ -1,0 +1,5 @@
+ply
+format ascii 1.0
+element face 0
+property list uchar int vertex_indices
+end_header
