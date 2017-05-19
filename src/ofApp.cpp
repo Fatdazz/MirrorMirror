@@ -267,6 +267,18 @@ void ofApp::update(){
     ofClear(255,255,255, 0);
     grayFboImage.draw(0, 0);
     temp.bind();
+    if (play && trackerFace.getFound()) {
+      ofPushMatrix();
+      ofVec3f mouthLeft = animation.getVertex(48);
+      ofVec3f mouthRight = animation.getVertex(55);
+      ofPushMatrix();
+      ofTranslate(0, -10, 0);
+      ofSetColor(ofColor::black, 30);
+      ofDrawRectangle(mouthLeft, mouthRight.x - mouthLeft.x, 20);
+      ofSetColor(ofColor::white);
+      ofPopMatrix();
+      ofPopMatrix();
+      }
     animation.draw();
     temp.unbind();
     fboColorMaskAndBackground.end();
